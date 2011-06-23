@@ -1,27 +1,29 @@
 TARGET = lua
 
-LUA_OBJS = 			src/luaPlayer.o src/utility.o \
-					src/luaControls.o src/luaGraphics.o src/luaSound.o \
-					src/lua3d.o src/luaTimer.o src/luaSystem.o src/luaWlan.o \
-					src/luaAdhoc.o
+LUA_OBJS =             src/luaPlayer.o src/utility.o \
+                    src/luaControls.o src/luaGraphics.o src/luaSound.o \
+                    src/lua3d.o src/luaTimer.o src/luaSystem.o src/luaWlan.o \
+                    
 
-ADHOC_OBJS = 		src/libs/adhoc/adhoc.o
+ADHOC_OBJS =         src/luaAdhoc.o
 
-AUDIO_OBJS = 		src/libs/aalib/pspaalib.o src/libs/aalib/pspaalibwav.o \
-			 		src/libs/aalib/pspaalibscemp3.o src/libs/aalib/pspaalibogg.o \
-					src/libs/aalib/pspaalibat3.o src/libs/aalib/pspaalibeffects.o
+AUDIO_OBJS =         src/libs/sounds/id3.o src/libs/sounds/player.o src/libs/sounds/aa3playerME.o \
+                    src/libs/sounds/mp3playerME.o src/libs/sounds/clock.o src/libs/sounds/pspaudiolib.o \
+                    src/libs/aalib/pspaalib.o src/libs/aalib/pspaalibwav.o \
+                     src/libs/aalib/pspaalibscemp3.o src/libs/aalib/pspaalibogg.o \
+                    src/libs/aalib/pspaalibat3.o src/libs/aalib/pspaalibeffects.o
 
-GRAPHICS_OBJS = 	src/libs/vram/vram.o \
-					src/libs/graphics/graphics.o src/libs/graphics/framebuffer.o
+GRAPHICS_OBJS =     src/libs/vram/vram.o \
+                    src/libs/graphics/graphics.o src/libs/graphics/framebuffer.o
 
-INTRAFONT_OBJS = 	src/libs/intraFont/libccc.o src/libs/intraFont/intraFont.o \
-					src/pspDveManager.o
+INTRAFONT_OBJS =     src/libs/intraFont/libccc.o src/libs/intraFont/intraFont.o \
+                    src/pspDveManager.o
 
-SCE_OBJS =			src/libs/sce/msgDialog.o src/libs/sce/osk.o src/libs/sce/browser.o
+SCE_OBJS =            src/libs/sce/msgDialog.o src/libs/sce/osk.o src/libs/sce/browser.o
 
-UNZIP_OBJS =
+UNZIP_OBJS =        src/libs/unzip/unzip.o
 
-OBJS =	$(UNZIP_OBJS) $(LUA_OBJS) $(ADHOC_OBJS) $(VFPU_OBJS) $(AUDIO_OBJS) $(GRAPHICS_OBJS) $(TILEMAP_OBJS) $(INTRAFONT_OBJS) $(SCE_OBJS) src/main.o src/loadlib.o src/extralibs.o
+OBJS =    $(UNZIP_OBJS) $(LUA_OBJS) $(ADHOC_OBJS) $(VFPU_OBJS) $(AUDIO_OBJS) $(GRAPHICS_OBJS) $(TILEMAP_OBJS) $(INTRAFONT_OBJS) $(SCE_OBJS) src/main.o src/loadlib.o
 
 CFLAGS = -O3 -frename-registers -ffast-math -fomit-frame-pointer -G0 -Wall -g
 CXXFLAGS = $(CFLAGS) -fno-exceptions -fno-rtti
@@ -33,9 +35,9 @@ LIBDIR =
 
 LDFLAGS =
 
-LIBS = 	-llua -lpsprtc -lpng -ljpeg -lpspgum -lpspgum_vfpu -lpspvfpu -lpspgu -lz -lpspaudio -lpspmp3 -lmad -lpsppower -lvorbisidec -lpspatrac3 -lm \
-		-lpspusb -lpspusbstor -lpsppower -lpsphttp -lpspssl -lpspwlan -lpspnet_adhocmatching -lpspnet_adhoc -lpspnet_adhocctl -lpsputility -lcurl \
-		-lpspgu -lpsphprm_driver -lpspkubridge -lpspsystemctrl_user -lpspumd
+LIBS =     -llua -lpsprtc -lpng -ljpeg -lpspgum -lpspgum_vfpu -lpspvfpu -lpspgu -lz -lpspaudio -lpspmp3 -lmad -lpsppower -lvorbisidec -lpspatrac3 -lm \
+        -lpspusb -lpspusbstor -lpsppower -lpsphttp -lpspssl -lpspwlan -lpspnet_adhocmatching -lpspnet_adhoc -lpspnet_adhocctl -lpsputility -lcurl \
+        -lpspgu -lpsphprm_driver -lpspkubridge -lpspsystemctrl_user -lpspumd -losl -lpspaudiocodec -lpspaudio_driver -lpspopenpsid
 
 
 
@@ -60,4 +62,4 @@ include $(PSPSDK)/lib/build.mak
 src/main.o: src/boot.c
 
 all :
-	cp	$(TARGET).prx debug
+    cp    $(TARGET).prx debug
