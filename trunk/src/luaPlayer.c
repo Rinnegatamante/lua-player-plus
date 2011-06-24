@@ -57,7 +57,8 @@ const char *runScript(const char* script, bool isStringBuffer)
 	luaSystem_init(L);
 	luaWlan_init(L);
 	luaAdhoc_init(L);
-	
+	luaMath_init(L);
+   
 	int s = 0;
 	const char *errMsg = NULL;
 
