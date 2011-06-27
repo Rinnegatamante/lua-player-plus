@@ -25,6 +25,8 @@
 #include "libs/sce/browser.h"
 #include "libs/unzip/unzip.h"
 #include "libs/mp4/main.h"
+#include <stdio.h>
+#include "libs/flv/flv2mpeg4.h"
 
 #define SIO_IOCTL_SET_BAUD_RATE 1
 #define LOADMODULE_ARGERROR "Argument error: System.loadModule(module, init) takes a module name and init method as string arguments."
@@ -1393,18 +1395,61 @@ static int lua_PlayMP4(lua_State *L)
 {
 	int argc = lua_gettop(L);
 	
-	if(argc != 2 && argc != 1)
+	if(argc != 1 && argc != 2)
 		return luaL_error(L, "Argument error: System.playMP4(filename) takes one or two arguments.");
 	
 	const char *file = luaL_checkstring(L, 1);
+	int debugmode;
+	if (argc == 2){
+	debugmode = luaL_checkint(L, 2);
+	}else{
+	debugmode = 0;
+	}
+	PlayMp4(file,debugmode);
+		
+	return 1;
+}
+void flv2mpeg4(const char* flv) {
 	
-	int fps;
+	char mpeg4[4096];
+	memset(mpeg4, 0, 4096);
+	sprintf(mpeg4, "%s.mp4", flv);
 	
-	if(argc == 2)
-		fps = luaL_checkint(L, 2);
-	else
-		fps = NULL;
-	PlayMp4(file,fps);
+	FILE* flv_fp = fopen(flv, "rb");
+	fseek(flv_fp, 0, SEEK_END);
+	int flv_buf_size = ftell(flv_fp);
+	char* flv_buf = malloc(flv_buf_size);
+	fseek(flv_fp, 0, SEEK_SET);
+	fread(flv_buf, 1, flv_buf_size, flv_fp);
+	fclose(flv_fp);
+	flv_fp = 0;
+	
+	FILE* mpeg4_fp = fopen(mpeg4, "wb+");
+	
+	open_flv2mpeg4_convert(320, 240);
+	
+	int outbuf_size;
+	void* outbuf = convert_flv_frame_to_mpeg4_frame(flv_buf, flv_buf_size, &outbuf_size);
+	
+	if ( outbuf )
+		fwrite(outbuf, outbuf_size, 1, mpeg4_fp);
+	
+	fclose(mpeg4_fp);
+	mpeg4_fp = 0;
+	
+	close_flv2mpeg4_convert();
+	
+}
+static int lua_convertFLV(lua_State *L)
+{
+	int argc = lua_gettop(L);
+	
+	if(argc != 1)
+		return luaL_error(L, "Argument error: FLV2MP4(filename) takes one argument.");
+	
+	const char *file = luaL_checkstring(L, 1);
+	
+	flv2mpeg4(file);
 		
 	return 1;
 }
@@ -1517,6 +1562,7 @@ static const luaL_reg System_functions[] = {
 void luaSystem_init(lua_State *L) {
 	luaL_openlib(L, "System", System_functions, 0);
 	luaL_openlib(L, "ZIP", Zip_functions, 0);
+	lua_register(L, "FLV2MP4", lua_convertFLV);
 
 #define PSP_UTILITY_CONSTANT(name)\
 	lua_pushstring(L, #name);\
