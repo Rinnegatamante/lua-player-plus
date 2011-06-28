@@ -1,25 +1,3 @@
-/*
- *   Copyright (C) 2008 cooleyes
- *   eyes.cooleyes@gmail.com
- *
- *   some enhancement done by André Borrmann 2010
- *
- *  This Program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation; either version 2, or (at your option)
- *  any later version.
- *
- *  This Program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with GNU Make; see the file COPYING.  If not, write to
- *  the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
- *  http://www.gnu.org/copyleft/gpl.html
- *
- */
 #include <pspkernel.h>
 #include <pspctrl.h>
 #include <pspdisplay.h>
@@ -39,8 +17,6 @@
 #include "../../include/kubridge.h"
 #include <pspmpeg.h>
 #include <mp4ff.h>
-#include "mpeg_vsh370.c"
-#include "../vfile/VirtualFile.h"
 
 SceCtrlData input;
 
@@ -178,7 +154,7 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    if (debugmode == 1){
    pspDebugScreenPrintf("cpu=%d, bus=%d\n", cpu, bus);
    }
-   strcat(filename,"ms0:/mpeg_vsh370.prx");
+   strcat(filename,"flash0:/kd/mpeg_vsh.prx");
    if (debugmode == 1){
    pspDebugScreenPrintf("%s\n", filename);
    }
@@ -202,8 +178,8 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
 
    if ( mp4ff_get_avc_sps_pps(mp4_handle, 0, &sps_pps_buffer, &sps_size, &pps_size) != 0 || sps_size == 0 || pps_size == 0 )  {
       if (debugmode == 1){
-	  pspDebugScreenPrintf("\nerr: get_avc_sps_pps\n");
-	  }
+      pspDebugScreenPrintf("\nerr: get_avc_sps_pps\n");
+      }
       goto wait;
    }
 
@@ -215,22 +191,17 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    //   pspDebugScreenPrintf("\nerr: sceUtilityLoadAvModule(0)\n");
    //   goto wait;
    //}
-
    SceUID modid;
    int status;
-    FILE * pFile;
-   pFile = fopen("ms0:/mpeg_vsh370.prx","wb");
-   fwrite (mpeg_vsh370 , 1 , size_mpeg_vsh370 , pFile );
-   fclose (pFile);
+
    modid = kuKernelLoadModule(filename, 0, NULL);
    if(modid >= 0) {
       modid = sceKernelStartModule(modid, 0, 0, &status, NULL);
-	  sceIoRemove("ms0:/mpeg_vsh370.prx");
    }
    else {
-	if (debugmode == 1){
+    if (debugmode == 1){
       pspDebugScreenPrintf("\nerr=0x%08X : sceKernelLoadModule\n", modid);
-	}
+    }
       goto wait;
    }
 
@@ -262,7 +233,7 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    if ( result < 0 ){
    if (debugmode == 1){
       pspDebugScreenPrintf("\nerr: sceMpegQueryMemSize(0x%08X)\n", avc->mpeg_mode);
-	  }
+      }
       goto wait;
    }
 
@@ -277,7 +248,7 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    if ( avc->mpeg_buffer == 0 ) {
    if (debugmode == 1){
       pspDebugScreenPrintf("\nerr: alloc\n");
-	  }
+      }
       goto wait;
    }
 
@@ -285,7 +256,7 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    if ( result != 0){
    if (debugmode == 1){
       pspDebugScreenPrintf("\nerr: sceMpegCreate\n");
-	  }
+      }
       goto wait;
    }
 
@@ -293,14 +264,14 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    if ( avc->mpeg_au == 0 ) {
    if (debugmode == 1){
       pspDebugScreenPrintf("\nerr: alloc\n");
-	  }
+      }
       goto wait;
    }
    memset(avc->mpeg_au, 0xFF, 64);
    if ( sceMpegInitAu(&avc->mpeg, avc->mpeg_au_buffer, avc->mpeg_au) != 0 ){
    if (debugmode == 1){
       pspDebugScreenPrintf("\nerr: sceMpegInitAu\n");
-	  }
+      }
       goto wait;
    }
 
@@ -421,8 +392,8 @@ while(!(input.Buttons & PSP_CTRL_TRIANGLE)) {
    ++frame_count;
    if ( frame_count >= total_samples ){
    sceDisplayWaitVblankStart();
-	return 1;
-	}
+    return 1;
+    }
    u64 curr_tick;
    sceRtcGetCurrentTick(&curr_tick);
    if ((curr_tick-last_tick) >= tick_frequency)
@@ -456,3 +427,4 @@ wait:
    sceKernelUnloadModule(modid);
    return 1;
 }
+
