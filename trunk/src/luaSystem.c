@@ -1484,7 +1484,6 @@ static const luaL_reg System_functions[] = {
   {"copyFile",                		lua_copyFile},
   {"copyDir",                       lua_copyDir},
   {"doesDirExist",                	lua_checkExist},
-  {"doesFileExist",                 lua_checkExist},
   {"loadlib",                		lua_loadModule},
   {"startUMDUpdate",                lua_startUMDUpdate},
   {"sioInit",                       lua_sioInit},
