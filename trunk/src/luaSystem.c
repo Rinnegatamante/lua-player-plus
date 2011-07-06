@@ -26,7 +26,6 @@
 #include "libs/unzip/unzip.h"
 #include "libs/mp4/main.h"
 #include <stdio.h>
-#include "libs/flv/flv2mpeg4.h"
 
 #define SIO_IOCTL_SET_BAUD_RATE 1
 #define LOADMODULE_ARGERROR "Argument error: System.loadModule(module, init) takes a module name and init method as string arguments."
@@ -50,6 +49,8 @@ DATATYPE* push##HANDLE(lua_State *L) { \
 }
 LuaCreateUserdataHandlersFix(Zip, Zip*)
 LuaCreateUserdataHandlersFix(ZipFile, ZipFile*)
+
+void startISO(char* file,int driver);
 
 typedef struct
 {
@@ -1409,50 +1410,6 @@ static int lua_PlayMP4(lua_State *L)
 		
 	return 1;
 }
-void flv2mpeg4(const char* flv) {
-	
-	char mpeg4[4096];
-	memset(mpeg4, 0, 4096);
-	sprintf(mpeg4, "%s.mp4", flv);
-	
-	FILE* flv_fp = fopen(flv, "rb");
-	fseek(flv_fp, 0, SEEK_END);
-	int flv_buf_size = ftell(flv_fp);
-	char* flv_buf = malloc(flv_buf_size);
-	fseek(flv_fp, 0, SEEK_SET);
-	fread(flv_buf, 1, flv_buf_size, flv_fp);
-	fclose(flv_fp);
-	flv_fp = 0;
-	
-	FILE* mpeg4_fp = fopen(mpeg4, "wb+");
-	
-	open_flv2mpeg4_convert(320, 240);
-	
-	int outbuf_size;
-	void* outbuf = convert_flv_frame_to_mpeg4_frame(flv_buf, flv_buf_size, &outbuf_size);
-	
-	if ( outbuf )
-		fwrite(outbuf, outbuf_size, 1, mpeg4_fp);
-	
-	fclose(mpeg4_fp);
-	mpeg4_fp = 0;
-	
-	close_flv2mpeg4_convert();
-	
-}
-static int lua_convertFLV(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	
-	if(argc != 1)
-		return luaL_error(L, "Argument error: FLV2MP4(filename) takes one argument.");
-	
-	const char *file = luaL_checkstring(L, 1);
-	
-	flv2mpeg4(file);
-		
-	return 1;
-}
 
 // Get CPU/BUS Speed
 static int lua_getCpu(lua_State *L)
@@ -1480,6 +1437,19 @@ static int lua_getBus(lua_State *L)
 	return 1;
 }
 
+// ISO Loader function
+static int lua_startISO(lua_State *L)
+{
+pspSdkLoadStartModule("ISOLoader.prx", PSP_MEMORY_PARTITION_KERNEL); 
+int argc = lua_gettop(L);
+if(argc != 2)
+		return luaL_error(L, "Argument error: System.startISO(filename,driver) takes two arguments.");
+const char *file = luaL_checkstring(L, 1);
+int driver = luaL_checkint(L, 2);
+startISO(file,driver);
+return 0;
+}
+
 // 
 //Register our Zip Functions
 static const luaL_reg Zip_functions[] = {
@@ -1493,6 +1463,7 @@ static const luaL_reg Zip_functions[] = {
 };
 //Register our System Functions
 static const luaL_reg System_functions[] = {
+  {"startISO",						lua_startISO},
   {"getCpuSpeed",					lua_getBus},
   {"getBusSpeed",					lua_getCpu},
   {"playMP4",						lua_PlayMP4},
@@ -1562,7 +1533,6 @@ static const luaL_reg System_functions[] = {
 void luaSystem_init(lua_State *L) {
 	luaL_openlib(L, "System", System_functions, 0);
 	luaL_openlib(L, "ZIP", Zip_functions, 0);
-	lua_register(L, "FLV2MP4", lua_convertFLV);
 
 #define PSP_UTILITY_CONSTANT(name)\
 	lua_pushstring(L, #name);\
