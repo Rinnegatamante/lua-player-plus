@@ -268,6 +268,75 @@ function System.getEbootTitle(filename)
 	return testo -- Ritorno il titolo
 end
 
+-- System.getParamTitle
+function System.getParamTitle(filename)
+	function s2i(s)
+		return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
+	end
+	file = io.open(filename,'rb')
+	offset = 12
+	file:seek('set',offset) -- Punto all'offset del pointer di inizio scrittura dati di PARAM.SFO
+	baseread = s2i(file:read(4)) -- Estraggo il suddetto pointer
+	file:seek('set',baseread+48) -- Punto al Titolo del PARAM.SFO
+	base = "r"
+	testo = ""
+	while string.byte(base) ~= 0 do -- Estraggo fino a trovare un byte nullo
+		base = file:read(1)
+		testo = testo .. base
+	end
+	file:close()
+	return testo -- Ritorno il titolo
+end
+
+-- System.getSaveInfo
+function System.getSaveInfo(filename,info)
+	function s2i(s)
+		return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
+	end
+	file = io.open(filename,'rb')
+	offset = 12
+	file:seek('set',offset)
+	baseread = s2i(file:read(4))
+	if info == 1 then -- Nome Salvataggio
+	file:seek('set',baseread+8)
+	base = "r"
+	testo = ""
+	while string.byte(base) ~= 0 do
+		base = file:read(1)
+		testo = testo .. base
+	end
+	end
+	if info == 2 then -- Codice Gioco
+	file:seek('set',baseread+1032)
+	base = "r"
+	testo = ""
+	while string.byte(base) ~= 0 do
+		base = file:read(1)
+		testo = testo .. base
+	end
+	end
+	if info == 3 then -- Descrizione Salvataggio
+	file:seek('set',baseread+4392)
+	base = "r"
+	testo = ""
+	while string.byte(base) ~= 0 do
+		base = file:read(1)
+		testo = testo .. base
+	end
+	end
+	if info == 4 then -- Titolo Gioco
+	file:seek('set',baseread+4520)
+	base = "r"
+	testo = ""
+	while string.byte(base) ~= 0 do
+		base = file:read(1)
+		testo = testo .. base
+	end
+	end
+	return testo
+	file:close()
+end
+
 -- System.doesFileExist
 function System.doesFileExist(filename)
 file = io.open(filename,"r")
