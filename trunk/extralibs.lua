@@ -1,18 +1,18 @@
 -- BMPLib
 function b(byte_number, byte_length)
 if byte_length == 1 then
-	return string.byte(string.sub(filestring, byte_number, byte_number))
+    return string.byte(string.sub(filestring, byte_number, byte_number))
 elseif byte_length == 2 then
-	byte1 = string.byte(string.sub(filestring, byte_number, byte_number))
-	byte2 = string.byte(string.sub(filestring, byte_number + 1, byte_number + 1))
-	return dec_to_dec2(byte1,byte2)
+    byte1 = string.byte(string.sub(filestring, byte_number, byte_number))
+    byte2 = string.byte(string.sub(filestring, byte_number + 1, byte_number + 1))
+    return dec_to_dec2(byte1,byte2)
 
 elseif byte_length == 4 then
-	byte1 = string.byte(string.sub(filestring, byte_number, byte_number))
-	byte2 = string.byte(string.sub(filestring, byte_number + 1, byte_number + 1))
-	byte3 = string.byte(string.sub(filestring, byte_number + 2, byte_number + 2))
-	byte4 = string.byte(string.sub(filestring, byte_number + 3, byte_number + 3))
-	return dec_to_dec4(byte1,byte2,byte3,byte4)
+    byte1 = string.byte(string.sub(filestring, byte_number, byte_number))
+    byte2 = string.byte(string.sub(filestring, byte_number + 1, byte_number + 1))
+    byte3 = string.byte(string.sub(filestring, byte_number + 2, byte_number + 2))
+    byte4 = string.byte(string.sub(filestring, byte_number + 3, byte_number + 3))
+    return dec_to_dec4(byte1,byte2,byte3,byte4)
 end
 end
 function dec_to_dec2(hexvalue1, hexvalue2)
@@ -76,11 +76,13 @@ file:close()
 return size
 end
 
--- System.getEboot
-function System.getEboot(filename,tipo)
+-- Utilities
 function s2i(s)
    return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
 end
+
+-- System.getEboot
+function System.getEboot(filename,tipo)
 eboot = io.open(filename,'rb')
 if tipo == 1 then -- ICON0.PNG
 eboot:seek('set',0xC)
@@ -125,9 +127,6 @@ end
 
 -- System.extractPBP
 function System.extractPBP(filename,dir)
-function s2i(s)
-   return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
-end
 final = System.getFileSize(filename)
 eboot = io.open(filename,'rb')
 eboot:seek('set',0x08)
@@ -192,9 +191,6 @@ end
 
 -- System.checkPBP
 function System.checkPBP(pbp,file)
-function s2i(s)
-   return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
-end
 if file == "PARAM.SFO" then
 offset = 0x08
 elseif file == "ICON0.PNG" then
@@ -248,93 +244,67 @@ end
 
 -- System.getEbootTitle
 function System.getEbootTitle(filename)
-	function s2i(s)
-		return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
-	end
-	file = io.open(filename,'rb')
-	file:seek('set',0x08) -- Punto all'offset del pointer di PARAM.SFO
-	pointer = s2i(file:read(4)) -- Estraggo il pointer di PARAM.SFO
-	offset = pointer + 12
-	file:seek('set',offset) -- Punto all'offset del pointer di inizio scrittura dati di PARAM.SFO
-	baseread = s2i(file:read(4)) -- Estraggo il suddetto pointer
-	file:seek('set',pointer+baseread+48) -- Punto al Titolo dell'EBOOT.PBP
-	base = "r"
-	testo = ""
-	while string.byte(base) ~= 0 do -- Estraggo fino a trovare un byte nullo
-		base = file:read(1)
-		testo = testo .. base
-	end
-	file:close()
-	return testo -- Ritorno il titolo
+    file = io.open(filename,'rb')
+    file:seek('set',0x08) -- Punto all'offset del pointer di PARAM.SFO
+    pointer = s2i(file:read(4)) -- Estraggo il pointer di PARAM.SFO
+    offset = pointer + 12
+    file:seek('set',offset) -- Punto all'offset del pointer di inizio scrittura dati di PARAM.SFO
+    baseread = s2i(file:read(4)) -- Estraggo il suddetto pointer
+    file:seek('set',pointer+baseread+48) -- Punto al Titolo dell'EBOOT.PBP
+    base = "r"
+    testo = ""
+    while string.byte(base) ~= 0 do -- Estraggo fino a trovare un byte nullo
+        base = file:read(1)
+        testo = testo .. base
+    end
+    file:close()
+    return testo -- Ritorno il titolo
 end
 
 -- System.getParamTitle
 function System.getParamTitle(filename)
-	function s2i(s)
-		return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
-	end
-	file = io.open(filename,'rb')
-	offset = 12
-	file:seek('set',offset) -- Punto all'offset del pointer di inizio scrittura dati di PARAM.SFO
-	baseread = s2i(file:read(4)) -- Estraggo il suddetto pointer
-	file:seek('set',baseread+48) -- Punto al Titolo del PARAM.SFO
-	base = "r"
-	testo = ""
-	while string.byte(base) ~= 0 do -- Estraggo fino a trovare un byte nullo
-		base = file:read(1)
-		testo = testo .. base
-	end
-	file:close()
-	return testo -- Ritorno il titolo
+    file = io.open(filename,'rb')
+    offset = 12
+    file:seek('set',offset) -- Punto all'offset del pointer di inizio scrittura dati di PARAM.SFO
+    baseread = s2i(file:read(4)) -- Estraggo il suddetto pointer
+    file:seek('set',baseread+48) -- Punto al Titolo del PARAM.SFO
+    base = "r"
+    testo = ""
+    while string.byte(base) ~= 0 do -- Estraggo fino a trovare un byte nullo
+        base = file:read(1)
+        testo = testo .. base
+    end
+    file:close()
+    return testo -- Ritorno il titolo
 end
 
 -- System.getSaveInfo
 function System.getSaveInfo(filename,info)
-	function s2i(s)
-		return 0x1000000*s:byte(4)+0x10000*s:byte(3)+0x100*s:byte(2)+s:byte(1)
-	end
-	file = io.open(filename,'rb')
-	offset = 12
-	file:seek('set',offset)
-	baseread = s2i(file:read(4))
-	if info == 1 then -- Nome Salvataggio
-	file:seek('set',baseread+8)
-	base = "r"
-	testo = ""
-	while string.byte(base) ~= 0 do
-		base = file:read(1)
-		testo = testo .. base
-	end
-	end
-	if info == 2 then -- Codice Gioco
-	file:seek('set',baseread+1032)
-	base = "r"
-	testo = ""
-	while string.byte(base) ~= 0 do
-		base = file:read(1)
-		testo = testo .. base
-	end
-	end
-	if info == 3 then -- Descrizione Salvataggio
-	file:seek('set',baseread+4392)
-	base = "r"
-	testo = ""
-	while string.byte(base) ~= 0 do
-		base = file:read(1)
-		testo = testo .. base
-	end
-	end
-	if info == 4 then -- Titolo Gioco
-	file:seek('set',baseread+4520)
-	base = "r"
-	testo = ""
-	while string.byte(base) ~= 0 do
-		base = file:read(1)
-		testo = testo .. base
-	end
-	end
-	return testo
-	file:close()
+    file = io.open(filename,'rb')
+    offset = 12
+    file:seek('set',offset)
+    baseread = s2i(file:read(4))
+    if info == 1 then -- Nome Salvataggio
+    extra = 8
+    end
+    if info == 2 then -- Codice Gioco
+    extra = 1032
+    end
+    if info == 3 then -- Descrizione Salvataggio
+    extra = 4392
+    end
+    if info == 4 then -- Titolo Gioco
+    extra = 4520
+    end
+    file:seek('set',baseread+extra)
+    base = "r"
+    testo = ""
+    while string.byte(base) ~= 0 do
+        base = file:read(1)
+        testo = testo .. base
+    end
+    return testo
+    file:close()
 end
 
 -- System.doesFileExist
@@ -350,19 +320,19 @@ end
 
 -- Opening main script
 if System.doesFileExist("SYSTEM.LUA") then
-	dofile("SYSTEM.LUA")
-	else
-	if System.doesFileExist("index.lua") then
-		dofile("index.lua")
-		else
-		if System.doesFileExist("script.lua") then
-			dofile("script.lua")
-			else
-			if System.doesFileExist("SYSTEM/SYSTEM.LUA") then
-				dofile("SYSTEM/SYSTEM.LUA")
-				else
-				error("Fatal Error: Main script doesn't exist")
-			end
-		end
-	end
+    dofile("SYSTEM.LUA")
+    else
+    if System.doesFileExist("index.lua") then
+        dofile("index.lua")
+        else
+        if System.doesFileExist("script.lua") then
+            dofile("script.lua")
+            else
+            if System.doesFileExist("SYSTEM/SYSTEM.LUA") then
+                dofile("SYSTEM/SYSTEM.LUA")
+                else
+                error("Fatal Error: Main script doesn't exist")
+            end
+        end
+    end
 end
