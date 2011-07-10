@@ -1436,17 +1436,26 @@ static int lua_getBus(lua_State *L)
 		
 	return 1;
 }
-
-// ISO Loader function
+// ISO/PSX Loader function
 static int lua_startISO(lua_State *L)
 {
 pspSdkLoadStartModule("ISOLoader.prx", PSP_MEMORY_PARTITION_KERNEL); 
 int argc = lua_gettop(L);
 if(argc != 2)
-		return luaL_error(L, "Argument error: System.startISO(filename,driver) takes two arguments.");
+        return luaL_error(L, "Argument error: System.startISO(filename,driver) takes two arguments.");
 const char *file = luaL_checkstring(L, 1);
 int driver = luaL_checkint(L, 2);
 startISO(file,driver);
+return 0;
+}
+static int lua_startPSX(lua_State *L)
+{
+pspSdkLoadStartModule("ISOLoader.prx", PSP_MEMORY_PARTITION_KERNEL); 
+int argc = lua_gettop(L);
+if(argc != 1)
+        return luaL_error(L, "Argument error: System.startISO(filename) takes one argument.");
+const char *file = luaL_checkstring(L, 1);
+launch_pops(file);
 return 0;
 }
 
@@ -1463,6 +1472,7 @@ static const luaL_reg Zip_functions[] = {
 };
 //Register our System Functions
 static const luaL_reg System_functions[] = {
+  {"startPSX",						lua_startPSX},
   {"startISO",						lua_startISO},
   {"getCpuSpeed",					lua_getBus},
   {"getBusSpeed",					lua_getCpu},
