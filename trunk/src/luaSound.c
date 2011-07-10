@@ -929,7 +929,6 @@ void luaSound_init(lua_State *L) {
     luaL_openlib(L, "Ogg", OGGFunctions, 0);
     luaL_openlib(L, "At3", AT3Functions, 0);
     luaL_openlib(L, "Wav", WAVFunctions, 0);
-    luaL_openlib(L, "Aac", Aac_functions, 0);
     luaL_openlib(L, "Mp3me", Mp3me_functions, 0);
     luaL_openlib(L, "Aa3me", Aa3me_functions, 0);
 }
