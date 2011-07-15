@@ -12,6 +12,11 @@ PSP_EXPORT_END
 PSP_EXPORT_START(KernelFunctions, 0, 0x4001)
 PSP_EXPORT_FUNC(startISO)
 PSP_EXPORT_FUNC(launch_pops)
+PSP_EXPORT_FUNC(read_eeprom)
+PSP_EXPORT_FUNC(write_eeprom)
+PSP_EXPORT_FUNC(getBaryon)
+PSP_EXPORT_FUNC(getPommel)
+PSP_EXPORT_FUNC(sceSysregGetTachyonVersion)
 PSP_EXPORT_END
 
 PSP_END_EXPORTS
