@@ -1,5 +1,5 @@
 TARGET = KernelFunctions
-OBJS = main.o sceSyscon_driver.S
+OBJS = main.o sceSyscon_driver.o
 
 INCDIR =
 CFLAGS = -O2 -G0 -Wall
