@@ -1,37 +1,8 @@
-/*
- * LuaPlayer Euphoria
- * ------------------------------------------------------------------------
- * Licensed under the BSD license, see LICENSE for details.
- *
- * Copyright (c) 2005 Frank Buss <fb@frank-buss.de> (aka Shine)
- * Copyright (c) 2009 Danny Glover <danny86@live.ie> (aka Zack) 
- *
- * Official Forum : http://www.retroemu.com/forum/forumdisplay.php?f=148
- * For help using LuaPlayer, code help, tutorials etc please visit the official site : http://www.retroemu.com/forum/forumdisplay.php?f=148
- *
- * Credits:
- * 
- * (from Shine/Zack) 
- *
- *   many thanks to the authors of the PSPSDK from http://forums.ps2dev.org
- *   and to the hints and discussions from #pspdev on freenode.net
- *
- * (from Zack Only)
- *
- * Thanks to Brunni for the Swizzle/UnSwizzle code (taken from oslib). 
- * Thanks to Arshia001 for AALIB. It is the sound engine used in LuaPlayer Euphoria. 
- * Thanks to HardHat for being a supportive friend and advisor.
- * Thanks to Benhur for IntraFont.
- * Thanks to Jono for the moveToVram code.
- * Thanks to Raphael for the Vram manager code.
- * Thanks to Osgeld, Dan369 & Cmbeke for testing LuaPlayer Euphoria for me and coming up with some neat ideas for it.
- * Thanks to the entire LuaPlayer Euphoria userbase, for using it and for supporting it's development. You guys rock!
- *
- *
- */
-
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
+
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 #include <psptypes.h>
 
@@ -51,36 +22,8 @@ typedef struct
 	int textureHeight;  // the real height of data, 2^n with n>=0
 	int imageWidth;  // the image width
 	int imageHeight;
-	int swizzled; //If the image is swizzled or not
-	int inVram; //If the image is in Vram or not
-	u16 width;
-	u16 height;
-	u16 stride;
-	u32 size;
-	u8 bits;
 	Color* data;
 } Image;
-
-/**
- * Swizzle an image.
- *
- * @param Image - Image to swizzle
- */
-void swizzle(Image *img);
-
-/**
- * UnSwizzle an image.
- *
- * @param Image - Image to Unswizzle
- */
-void unSwizzleFast(Image *img);
-
-/**
- * Move an image to Vram.
- *
- * @param Iamge - Image to move to Vram
- */
-void moveImageToVram(Image* img);
 
 /**
  * Load a PNG or JPEG image (depends on the filename suffix).
@@ -89,11 +32,7 @@ void moveImageToVram(Image* img);
  * @param filename - filename of the PNG image to load
  * @return pointer to a new allocated Image struct, or NULL on failure
  */
-Image* loadImage(const char* filename);
-
-//extern void swizzle_fast(unsigned char *dest, unsigned char *source, int width, int height);
-//extern void swizzle( Image* img );
-//extern void un
+extern Image* loadImage(const char* filename);
 
 /**
  * Load a PNG image.
@@ -102,7 +41,7 @@ Image* loadImage(const char* filename);
  * @param filename - filename of the PNG image to load
  * @return pointer to a new allocated Image struct, or NULL on failure
  */
-Image* loadPngImage(const char* filename);
+extern Image* loadPngImage(const char* filename);
 
 /**
  * Load a JPEG image.
@@ -111,17 +50,7 @@ Image* loadPngImage(const char* filename);
  * @param filename - filename of the JPEG image to load
  * @return pointer to a new allocated Image struct, or NULL on failure
  */
-Image* loadJpegImage(const char* filename);
-
-/**
- * Load a PNG or JPEG image from in-memory data (with auto detection of the format).
- *
- * @pre data != NULL && len >0
- * @param data - the in-memory bytes of the image
- * @param len - the number of valid bytes at the data pointer
- * @return pointer to a new allocated Image struct, or NULL on failure
- */
-Image* loadImageFromMemory(const unsigned char* data, int len, const char *filename);
+extern Image* loadJpegImage(const char* filename);
 
 /**
  * Blit a rectangle part of an image to another image.
@@ -140,7 +69,7 @@ Image* loadImageFromMemory(const unsigned char* data, int len, const char *filen
  * @param dy - top target position in destination image
  * @param destination - pointer to Image struct of the destination image
  */
-void blitImageToImage(int sx, int sy, int width, int height, Image* source, int dx, int dy, Image* destination);
+extern void blitImageToImage(int sx, int sy, int width, int height, Image* source, int dx, int dy, Image* destination);
 
 /**
  * Blit a rectangle part of an image to screen.
@@ -158,7 +87,7 @@ void blitImageToImage(int sx, int sy, int width, int height, Image* source, int 
  * @param dx - left target position in destination image
  * @param dy - top target position in destination image
  */
-void blitImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy);
+extern void blitImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy);
 
 /**
  * Blit a rectangle part of an image to another image without alpha pixels in source image.
@@ -177,7 +106,7 @@ void blitImageToScreen(int sx, int sy, int width, int height, Image* source, int
  * @param dy - top target position in destination image
  * @param destination - pointer to Image struct of the destination image
  */
-void blitAlphaImageToImage(int sx, int sy, int width, int height, Image* source, int dx, int dy, Image* destination);
+extern void blitAlphaImageToImage(int sx, int sy, int width, int height, Image* source, int dx, int dy, Image* destination);
 
 /**
  * Blit a rectangle part of an image to screen without alpha pixels in source image.
@@ -195,25 +124,7 @@ void blitAlphaImageToImage(int sx, int sy, int width, int height, Image* source,
  * @param dx - left target position in destination image
  * @param dy - top target position in destination image
  */
-void blitAlphaImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy, u32 alpha);
-
-/**
- * Blit a rectangle part of an image to screen with alpha pixels in source image.
- *
- * @pre source != NULL && destination != NULL &&
- *      sx >= 0 && sy >= 0 &&
- *      width > 0 && height > 0 &&
- *      sx + width <= source->width && sy + height <= source->height &&
- *      dx + width <= SCREEN_WIDTH && dy + height <= SCREEN_HEIGHT
- * @param sx - left position of rectangle in source image
- * @param sy - top position of rectangle in source image
- * @param width - width of rectangle in source image
- * @param height - height of rectangle in source image
- * @param source - pointer to Image struct of the source image
- * @param dx - left target position in destination image
- * @param dy - top target position in destination image
- */
-
+extern void blitAlphaImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy);
 
 /**
  * Create an empty image.
@@ -223,7 +134,7 @@ void blitAlphaImageToScreen(int sx, int sy, int width, int height, Image* source
  * @param height - height of the new image
  * @return pointer to a new allocated Image struct, all pixels initialized to color 0, or NULL on failure
  */
-Image* createImage(int width, int height);
+extern Image* createImage(int width, int height);
 
 /**
  * Frees an allocated image.
@@ -231,7 +142,7 @@ Image* createImage(int width, int height);
  * @pre image != null
  * @param image a pointer to an image struct
  */
-void freeImage(Image* image);
+extern void freeImage(Image* image);
 
 /**
  * Initialize all pixels of an image with a color.
@@ -240,21 +151,14 @@ void freeImage(Image* image);
  * @param color - new color for the pixels
  * @param image - image to clear
  */
-void clearImage(Color color, Image* image);
-
-/**
- * Initialize all pixels of the screen with a color. Fast but not as effective as slowClearScreen
- *
- * @param color - new color for the pixels
- */
-void clearScreen(Color color);
+extern void clearImage(Color color, Image* image);
 
 /**
  * Initialize all pixels of the screen with a color.
  *
  * @param color - new color for the pixels
  */
-void slowClearScreen(Color color);
+extern void clearScreen(Color color);
 
 /**
  * Fill a rectangle of an image with a color.
@@ -267,7 +171,7 @@ void slowClearScreen(Color color);
  * @param height - height of rectangle in image
  * @param image - image
  */
-void fillImageRect(Color color, int x0, int y0, int width, int height, Image* image);
+extern void fillImageRect(Color color, int x0, int y0, int width, int height, Image* image);
 
 /**
  * Fill a rectangle of an image with a color.
@@ -279,7 +183,7 @@ void fillImageRect(Color color, int x0, int y0, int width, int height, Image* im
  * @param width - width of rectangle in image
  * @param height - height of rectangle in image
  */
-void fillScreenRect(Color color, int x0, int y0, int width, int height);
+extern void fillScreenRect(Color color, int x0, int y0, int width, int height);
 
 /**
  * Set a pixel on screen to the specified color.
@@ -289,7 +193,7 @@ void fillScreenRect(Color color, int x0, int y0, int width, int height);
  * @param x - left position of the pixel
  * @param y - top position of the pixel
  */
-void putPixelScreen(Color color, int x, int y);
+extern void putPixelScreen(Color color, int x, int y);
 
 /**
  * Set a pixel in an image to the specified color.
@@ -299,7 +203,7 @@ void putPixelScreen(Color color, int x, int y);
  * @param x - left position of the pixel
  * @param y - top position of the pixel
  */
-void putPixelImage(Color color, int x, int y, Image* image);
+extern void putPixelImage(Color color, int x, int y, Image* image);
 
 /**
  * Get the color of a pixel on screen.
@@ -309,7 +213,7 @@ void putPixelImage(Color color, int x, int y, Image* image);
  * @param y - top position of the pixel
  * @return the color of the pixel
  */
-Color getPixelScreen(int x, int y);
+extern Color getPixelScreen(int x, int y);
 
 /**
  * Get the color of a pixel of an image.
@@ -319,7 +223,7 @@ Color getPixelScreen(int x, int y);
  * @param y - top position of the pixel
  * @return the color of the pixel
  */
-Color getPixelImage(int x, int y, Image* image);
+extern Color getPixelImage(int x, int y, Image* image);
 
 /**
  * Print a text (pixels out of the screen or image are clipped).
@@ -329,7 +233,7 @@ Color getPixelImage(int x, int y, Image* image);
  * @param text - the text to print
  * @param color - text color
  */
-void printTextScreen(int x, int y, const char* text, Color color);
+extern void printTextScreen(int x, int y, const char* text, Color color);
 
 /**
  * Print a text (pixels out of the screen or image are clipped).
@@ -340,8 +244,27 @@ void printTextScreen(int x, int y, const char* text, Color color);
  * @param color - text color
  * @param image - image
  */
-void printTextImage(int x, int y, const char* text, Color color, Image* image);
+extern void printTextImage(int x, int y, const char* text, Color color, Image* image);
+/**
+ * Print a text, which was rendered to a bitmap with Freetype.
+ *
+ * @param x - left position of text
+ * @param y - top position of text
+ * @param text - the text to print
+ * @param color - text color
+ * @param image - image
+ */
+extern void fontPrintTextImage(FT_Bitmap* bitmap, int x, int y, Color color, Image* image);
 
+/**
+ * Print a text, which was rendered to a bitmap with Freetype.
+ *
+ * @param x - left position of text
+ * @param y - top position of text
+ * @param text - the text to print
+ * @param color - text color
+ */
+extern void fontPrintTextScreen(FT_Bitmap* bitmap, int x, int y, Color color);
 /**
  * Save an image or the screen in PNG or JPEG format (depends on the filename suffix).
  *
@@ -353,7 +276,7 @@ void printTextImage(int x, int y, const char* text, Color color, Image* image);
  * @param lineSize - physical width of the image or PSP_LINE_SIZE
  * @param saveAlpha - if 0, image is saved without alpha channel
  */
-void saveImage(const char* filename, Color* data, int width, int height, int lineSize, int saveAlpha);
+extern void saveImage(const char* filename, Color* data, int width, int height, int lineSize, int saveAlpha);
 
 /**
  * Save an image or the screen in PNG format.
@@ -366,7 +289,7 @@ void saveImage(const char* filename, Color* data, int width, int height, int lin
  * @param lineSize - physical width of the image or PSP_LINE_SIZE
  * @param saveAlpha - if 0, image is saved without alpha channel
  */
-void savePngImage(const char* filename, Color* data, int width, int height, int lineSize, int saveAlpha);
+extern void savePngImage(const char* filename, Color* data, int width, int height, int lineSize, int saveAlpha);
 
 /**
  * Save an image or the screen in JPEG format.
@@ -378,22 +301,22 @@ void savePngImage(const char* filename, Color* data, int width, int height, int 
  * @param height - height of the image or SCREEN_HEIGHT
  * @param lineSize - physical width of the image or PSP_LINE_SIZE
  */
-void saveJpegImage(const char* filename, Color* data, int width, int height, int lineSize);
+extern void saveJpegImage(const char* filename, Color* data, int width, int height, int lineSize);
 
 /**
  * Exchange display buffer and drawing buffer.
  */
-void flipScreen();
+extern void flipScreen();
 
 /**
  * Initialize the graphics.
  */
-void initGraphics();
+extern void initGraphics();
 
 /**
  * Disable graphics, used for debug text output.
  */
-void disableGraphics();
+extern void disableGraphics();
 
 /**
  * Draw a line to screen.
@@ -417,23 +340,40 @@ void drawLineScreen(int x0, int y0, int x1, int y1, Color color);
  * @param x1 - x line end position
  * @param y1 - y line end position
  */
-void drawLineImage(int x0, int y0, int x1, int y1, Color color, Image* image);
+extern void drawLineImage(int x0, int y0, int x1, int y1, Color color, Image* image);
 
 /**
  * Get the current draw buffer for fast unchecked access.
  *
  * @return the start address of the current draw buffer
  */
-Color* getVramDrawBuffer();
+extern Color* getVramDrawBuffer();
 
 /**
  * Get the current display buffer for fast unchecked access.
  *
  * @return the start address of the current display buffer
  */
-Color* getVramDisplayBuffer();
+extern Color* getVramDisplayBuffer();
 
-void guStart();
-void guEnd();
+extern void guStart();
+
+/**
+* Fast Blit Functions
+* Call the init, blit the images, and then call then end
+* Allows for faster blitting
+* Doesnt need to recall the gu init and finish after every image
+*/
+
+void FastStartBlit();
+
+void FastEndBlit();
+
+void fastClearScreen(Color color);
+
+void fastBlitImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy);
+
+void fastBlitAlphaImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy);
 
 #endif
+
