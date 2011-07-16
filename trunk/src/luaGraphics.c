@@ -1,1343 +1,764 @@
-/*
- * LuaPlayer Euphoria
- * ------------------------------------------------------------------------
- * Licensed under the BSD license, see LICENSE for details.
- *
- * Copyright (c) 2005 Frank Buss <fb@frank-buss.de> (aka Shine)
- * Copyright (c) 2009 Danny Glover <danny86@live.ie> (aka Zack) 
- *
- * Official Forum : http://www.retroemu.com/forum/forumdisplay.php?f=148
- * For help using LuaPlayer, code help, tutorials etc please visit the official site : http://www.retroemu.com/forum/forumdisplay.php?f=148
- *
- * Credits:
- * 
- * (from Shine/Zack) 
- *
- *   many thanks to the authors of the PSPSDK from http://forums.ps2dev.org
- *   and to the hints and discussions from #pspdev on freenode.net
- *
- * (from Zack Only)
- *
- * Thanks to Brunni for the Swizzle/UnSwizzle code (taken from oslib). 
- * Thanks to Arshia001 for AALIB. It is the sound engine used in LuaPlayer Euphoria. 
- * Thanks to HardHat for being a supportive friend and advisor.
- * Thanks to Benhur for IntraFont.
- * Thanks to Jono for the moveToVram code.
- * Thanks to Raphael for the Vram manager code.
- * Thanks to Osgeld, Dan369 & Cmbeke for testing LuaPlayer Euphoria for me and coming up with some neat ideas for it.
- * Thanks to the entire LuaPlayer Euphoria userbase, for using it and for supporting it's development. You guys rock!
- *
- *
- */
-
 #include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <sys/stat.h>
-#include <pspkernel.h>
-#include <pspusb.h>
-#include <pspusbstor.h>
-#include <psppower.h>
-#include <pspdebug.h>
-#include <psprtc.h>
-#include <pspgu.h>
 #include <malloc.h>
 #include <pspdisplay.h>
 #include <psputils.h>
+#include <png.h>
 #include <pspgu.h>
-#include <pspgum.h>
-#include "include/luaplayer.h"
 
-#include "libs/graphics/graphics.h"
-#include "libs/intraFont/intraFont.h"
+#include <jpeglib.h>
+#include <jerror.h>
 
-static const void* theScreen;
-static Image theScreenImage;
+#include "graphics.h"
+#include "framebuffer.h"
 
-UserdataStubs(Color, Color);
+#define IS_ALPHA(color) (((color)&0xff000000)==0xff000000?0:1)
+#define FRAMEBUFFER_SIZE (PSP_LINE_SIZE*SCREEN_HEIGHT*4)
+#define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
+#define false 0
+#define true 1
+#define int_p_NULL NULL
+#define png_voidp_NULL NULL
+#define png_infopp_NULL NULL
+#define png_bytep_NULL NULL
+#define png_error_ptr_NULL NULL
+#define png_set_gray_1_2_4_to_8 png_set_expand_gray_1_2_4_to_8
+#define png_set_expand_gray_1_2_4_to_8(p) png_set_expand(p)
 
-//Wait for Vsync
-static int lua_WaitVblankStart(lua_State *L)
+typedef struct
 {
-	int argc = lua_gettop(L), t = 0;
-	if (argc != 0 && argc != 1 && argc != 2)
-	{
-		return luaL_error(L, "Screen.waitVblankStart() takes 0, 1 or 2 arguments only");
-	}
-	
-	if (argc) t = lua_type(L, 1);
-	if (argc == 0 || t != LUA_TNUMBER) 
-	{
-		sceDisplayWaitVblankStart();
-	} 
-	else 
-	{
-		int count = (t == LUA_TNUMBER)?luaL_checkint(L, 1):luaL_checkint(L, 2);
-		int i;
-		for (i = 0; i < count; i++) sceDisplayWaitVblankStart();
-	}
-	
-	return 0;
+	unsigned short u, v;
+	short x, y, z;
+} Vertex;
+
+extern u8 msx[];
+
+unsigned int __attribute__((aligned(16))) list[262144];
+static int dispBufferNumber;
+static int initialized = 0;
+
+static int getNextPower2(int width){
+	int b = width;
+	int n;
+	for (n = 0; b != 0; n++) b >>= 1;
+	b = 1 << n;
+	if (b == 2 * width) b >>= 1;
+	return b;
 }
 
-static int lua_FlipScreen(lua_State *L)
+Color* getVramDrawBuffer()
 {
-	flipScreen();
-	
-	return 0;
+	Color* vram = (Color*) g_vram_base;
+	if (dispBufferNumber == 0) vram += FRAMEBUFFER_SIZE / sizeof(Color);
+	return vram;
 }
 
-/* // old intraFont functions
-// Colors
-enum colors {
-	RED =	0xFF0000FF,
-	GREEN =	0xFF00FF00,
-	BLUE =	0xFFFF0000,
-	WHITE =	0xFFFFFFFF,
-	LITEGRAY = 0xFFBFBFBF,
-	GRAY =  0xFF7F7F7F,
-	DARKGRAY = 0xFF3F3F3F,		
-	BLACK = 0xFF000000,
-	PURPLE = 0xFF800080,
-	YELLOW = 0xFFFF00FF,
-	ORANGE = 0xFF0066FF,
-	TRANSPARENT = 0x7FFFFFFF,
-};
-
-
-intraFont *font;
-
-//Load a font using IntraFont
-static int lua_IntraFontLoad(lua_State *L)
+Color* getVramDisplayBuffer()
 {
-
-	int argc = lua_gettop(L);
-	if (argc != 1)
-	{
-		return luaL_error(L, "IntraFont.load(fileName) takes 1 argument (the filename & path");
-	}
-	
-	const char *path = luaL_checkstring(L, 1);
-	
-	char userFont[512];
-	getcwd(userFont, 256);
-	strcat(userFont, "/");
-	strcat(userFont, path);
-	
-	font = intraFontLoad(userFont, 0);
-	
-	if (intraFontLoad(userFont, 0) == 0)
-	{
-		return luaL_error(L, "Could not load Font, please check your path, and ensure the file exists");
-	}
-	
-	return 1;
+	Color* vram = (Color*) g_vram_base;
+	if (dispBufferNumber == 1) vram += FRAMEBUFFER_SIZE / sizeof(Color);
+	return vram;
 }
 
-//Print text using IntraFont
-static int lua_IntraFontPrint(lua_State *L)
+void user_warning_fn(png_structp png_ptr, png_const_charp warning_msg)
 {
-	int argc = lua_gettop(L);
-	if (argc !=1 && argc != 2 && argc != 3 && argc != 4 && argc != 5 && argc != 6 && argc != 7)
-	{	
-		return luaL_error(L, "IntraFont.print() takes 7 arguments : font, x, y, textSize, foreGround color, backGroundColor, text");
-	}
-
-	const char *path = luaL_checkstring(L, 1);
-	char userFont[512];
-	getcwd(userFont, 256);
-	strcat(userFont, "/");
-	strcat(userFont, path);
-
-	pspDebugScreenSetXY(15,2);
-	
-	float x = lua_tonumber(L, 2);
-	float y = lua_tonumber(L, 3);
-	float size = lua_tonumber(L, 4);
-	unsigned int textColorCheck1 = lua_tonumber(L, 5);
-	unsigned int textColorCheck2 = lua_tonumber(L, 6);
-	const char *text = luaL_checkstring(L, 7);
-	
-	unsigned int textColor1 = WHITE;
-	unsigned int textColor2 = BLACK;
-	
-	//Text colors
-	switch(textColorCheck1)
-	{
-		case 0 : 
-			textColor1 = BLACK;
-		break;
-		
-		case 1 :
-			textColor1 = RED;
-		break;
-		
-		case 2 :
-			textColor1 = BLUE;
-		break;
-		
-		case 3 : 
-			textColor1 = WHITE;
-		break;
-		
-		case 4 :
-			textColor1 = LITEGRAY;
-		break;
-		
-		case 5 : 
-			textColor1 = GRAY;
-		break;
-		
-		case 6 :
-			textColor1 = DARKGRAY;
-		break;
-		
-		case 7 : 
-			textColor1 = PURPLE;
-		break;
-		
-		case 8 :
-			textColor1 = YELLOW;
-		break;
-		
-		case 9 :
-			textColor1 = ORANGE;
-		break;
-		
-		case 10 :
-			textColor1 = TRANSPARENT;
-		break;
-	}
-	
-	//Text colors 2
-	switch(textColorCheck2)
-	{
-		case 0 : 
-			textColor2 = BLACK;
-		break;
-		
-		case 1 :
-			textColor2 = RED;
-		break;
-		
-		case 2 :
-			textColor2 = BLUE;
-		break;
-		
-		case 3 : 
-			textColor2 = WHITE;
-		break;
-		
-		case 4 :
-			textColor2 = LITEGRAY;
-		break;
-		
-		case 5 : 
-			textColor2 = GRAY;
-		break;
-		
-		case 6 :
-			textColor2 = DARKGRAY;
-		break;
-		
-		case 7 : 
-			textColor2 = PURPLE;
-		break;
-		
-		case 8 :
-			textColor2 = YELLOW;
-		break;
-		
-		case 9 :
-			textColor2 = ORANGE;
-		break;
-		
-		case 10 :
-			textColor2 = TRANSPARENT;
-		break;
-	}
-	
-	intraFontSetStyle(font, size, textColor1, textColor2, INTRAFONT_ALIGN_LEFT);
-	intraFontPrint(font, x, y, text);
-	
-	return 1;
 }
 
-//Unload a font using IntraFont
-static int lua_IntraFontUnload(lua_State *L)
+static int isJpegFile(const char* filename)
 {
-	int argc = lua_gettop(L);
-	if (argc != 0)
-	{
-		return luaL_error(L, "IntraFont.unLoad() takes no arguments");
+	char* suffix = strrchr(filename, '.');
+	if (suffix) {
+		if (stricmp(suffix, ".jpg") == 0 || stricmp(suffix, ".jpeg") == 0) return true;
 	}
-
-	intraFontUnload(font);	
-	
-	return 1;
+	return false;
 }
 
-//Register IntraFont Functions
-static const luaL_reg Font_functions[] = {
-	{"load", 		lua_IntraFontLoad},
-	{"print", 		lua_IntraFontPrint},
-	{"unLoad", 		lua_IntraFontUnload},
-	{0,0}
-};
-*/
-
-UserdataStubs(Image, Image*);
-
-//Create an Empty Image
-static int lua_ImageCreateEmpty(lua_State *L)
+Image* loadImage(const char* filename)
 {
-	if (lua_gettop(L) != 2)
-	{
-		return luaL_error(L, "Image.createEmpty(w, h) takes two arguments.");
-	}
-	
-	unsigned int w = luaL_checkint(L, 1);
-	unsigned int h = luaL_checkint(L, 2);
-	
-	if (w > 512 || h > 512) return luaL_error(L, "invalid size");
-	
-	lua_gc(L, LUA_GCCOLLECT, 0);
-	Image* image = createImage(w, h);
-	
-	if (!image) return luaL_error(L, "Can't create image");
-	Image** luaImage = pushImage(L);
-	*luaImage = image;
-	
-	return 1;
-}
-
-//Load an image from file (png and jpeg supported)
-static int lua_ImageLoad(lua_State *L) 
-{
-	if (lua_gettop(L) != 1)
-	{	
-		return luaL_error(L, "Image.load(filename) takes one argument (the filename and path)");
-	}
-	
-	lua_gc(L, LUA_GCCOLLECT, 0);
-	Image* image = loadImage(luaL_checkstring(L, 1));
-	
-	if(!image) return luaL_error(L, "Image.load: Error loading image.");
-	Image** luaImage = pushImage(L);
-	*luaImage = image;
-	
-	return 1;
-}
-
-#define SETDEST \
-	Image *dest = NULL; \
-	{ \
-		int type = lua_type(L, 1); \
-		if (type == LUA_TTABLE) lua_remove(L, 1); \
-		else if (type == LUA_TUSERDATA) { \
-			dest = *toImage(L, 1); \
-			lua_remove(L, 1); \
-		} else return luaL_error(L, "Method must be called with a colon!"); \
-	}
-
-//Blit an image to an image or the screen
-static int lua_ImageBlit(lua_State *L) 
-{
-	int argc = lua_gettop(L);
-	
-	if ((argc < 3) | (argc > 5 && argc < 7) | (argc > 7 && argc < 9)) 
-	{
-		return luaL_error(L, "image:blit() takes 3, 4, 6 or 8 arguments \n\n3 arguments : (x, y, image) \n4 arguments : (x, y, image, alpha) \n6 arguments : (x, y, image, alpha, source x, source y) \n 8 arguments : (x, y, image, alpha, source x, source y, width, height)");
-	}
-	 
-	if (argc==6 || argc== 10) lua_pop(L, 1);
-	
-	SETDEST
-		
-	int dx = luaL_checkint(L, 1);
-	int dy = luaL_checkint(L, 2);
-	
-	Image* source;
-	if (lua_topointer(L, 3) == theScreen) 
-	{
-		theScreenImage.data = getVramDrawBuffer();
-		source = &theScreenImage;
-	} 
-	else 
-	{
-		source = *toImage(L, 3);
-	}
-	
-	bool rect = (argc == 9 || argc == 10);
-	bool alpha = (argc == 5);
-	int setAlpha = alpha? luaL_checkint(L, 4) : 255;
-	int sx = rect? luaL_checkint(L, 5) : 0;
-	int sy = rect? luaL_checkint(L, 6) : 0;
-	int width = rect? luaL_checkint(L, 7) : source->imageWidth;
-	int height = rect? luaL_checkint(L, 8) : source->imageHeight;
-	
-	if (dest)
-		blitAlphaImageToImage(sx, sy, width, height, source, dx, dy, dest);
-	else
-		blitAlphaImageToScreen(sx, sy, width, height, source, dx, dy, setAlpha);
-	
-	return 0;
-}
-	
-//Clears an image or the screen to a color (Fast, but may not work with debug text)
-static int lua_ImageClear(lua_State *L) 
-{
-	int argc = lua_gettop(L);
-	if(argc != 1 && argc != 2)
-	{
-		return luaL_error(L, "Image:clear([color]) takes zero or one argument.");
-	}
-	
-	Color color = (argc==2)?*toColor(L, 2):0;
-
-	SETDEST
-	if(dest)
-		clearImage(color, dest);
-	else
-		clearScreen(color);
-	return 0;
-}
-
-//Clears an image or the screen to a color (slow, but works with debug text)
-static int lua_ImageSlowClear(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	
-	if(argc != 1 && argc != 2)
-	{
-		return luaL_error(L, "Image:clear([color]) takes zero or one argument.");
-	}
-	
-	Color color = (argc==2)?*toColor(L, 2):0;
-
-	SETDEST
-	if(dest)
-		clearImage(color, dest);
-	else
-		slowClearScreen(color);
-	return 0;
-}
-
-//Fills an image or the screen with a Rectangle
-static int lua_ImageFillRect(lua_State *L) 
-{
-	int argc = lua_gettop(L);
-	
-	if (argc != 5 && argc != 6)
-	{
-		return luaL_error(L, "Image.fillRect() takes a minimum of 4 arguments");
-	}
-	
-	SETDEST
-
-	int x0 = luaL_checkint(L, 1);
-	int y0 = luaL_checkint(L, 2);
-	unsigned int width = luaL_checkint(L, 3);
-	unsigned int height = luaL_checkint(L, 4);
-	Color color = (argc==6)?*toColor(L, 5):0;
-	
-	if (width <= 0 || height <= 0) return 0;
-	
-	if (x0 < 0) 
-	{
-		width += x0;
-		if (width <= 0) return 0;
-		x0 = 0;
-	}
-	if (y0 < 0) 
-	{
-		height += y0;
-		if (height <= 0) return 0;
-		y0 = 0;
-	}
-	if (!dest) 
-	{
-		if (width <= 0 || height <= 0) return 0;
-		if (x0 >= SCREEN_WIDTH || y0 >= SCREEN_HEIGHT) return 0;
-		if (x0 + width >= SCREEN_WIDTH)
-		{
-			width = SCREEN_WIDTH - x0;
-			if (width <= 0) return 0;
-		}
-		if (y0 + height >= SCREEN_HEIGHT) 
-		{
-			height = SCREEN_HEIGHT - y0;
-			if (height <= 0) return 0;
-		}
-		fillScreenRect(color, x0, y0, width, height);
-	} 
-	else
-	{
-		if (x0 >= dest->imageWidth || y0 >= dest->imageHeight) return 0;
-		if (x0 + width >= dest->imageWidth) 
-		{
-			width = dest->imageWidth - x0;
-			if (width <= 0) return 0;
-		}
-		if (y0 + height >= dest->imageHeight)
-		{
-			height = dest->imageHeight - y0;
-			if (height <= 0) return 0;
-		}
-		fillImageRect(color, x0, y0, width, height, dest);
-	}
-	
-	return 0;
-}
-
-//Draws a line
-static int lua_ImageDrawLine(lua_State *L) 
-{
-	int argc = lua_gettop(L); 
-	
-	if (argc != 5 && argc != 6) 
-	{
-		return luaL_error(L, "Image.drawLine() takes a minimum of 4 arguments"); 
-	}
-	
-	SETDEST
-	unsigned int x0 = luaL_checkint(L, 1); 
-	unsigned int y0 = luaL_checkint(L, 2); 
-	unsigned int x1 = luaL_checkint(L, 3); 
-	unsigned int y1 = luaL_checkint(L, 4); 
-	Color color = (argc==6) ? *toColor(L, 5) : 0;
-	
-	// TODO: better clipping
-	if (x0 < 0) x0 = 0;
-	if (y0 < 0) y0 = 0;
-	if (x1 < 0) x1 = 0;
-	if (y1 < 0) y1 = 0;
-	
-	if (!dest) 
-	{
-		if (x0 >= SCREEN_WIDTH) x0 = SCREEN_WIDTH - 1;
-		if (x1 >= SCREEN_WIDTH) x1 = SCREEN_WIDTH - 1;
-		if (y0 >= SCREEN_HEIGHT) y0 = SCREEN_HEIGHT - 1;
-		if (y1 >= SCREEN_HEIGHT) y1 = SCREEN_HEIGHT - 1;
-		drawLineScreen(x0, y0, x1, y1, color);
+	if (isJpegFile(filename)) {
+		return loadJpegImage(filename);
 	} else {
-
-		if (x0 >= dest->imageWidth) x0 = dest->imageWidth - 1;
-		if (x1 >= dest->imageWidth) x1 = dest->imageWidth - 1;
-		if (y0 >= dest->imageHeight) y0 = dest->imageHeight - 1;
-		if (y1 >= dest->imageHeight) y1 = dest->imageHeight - 1;
-		drawLineImage(x0, y0, x1, y1, color, dest);
+		return loadPngImage(filename);
 	}
-	return 0;
 }
 
-//Get the color from a pixel
-static int lua_ImagePixel(lua_State *L) 
+Image* loadPngImage(const char* filename)
 {
-	int argc = lua_gettop(L);
-	if(argc != 3 && argc != 4)
-	{
-		return luaL_error(L, "Image:pixel(x, y, [color]) takes two or three arguments, and must be called with a colon.");
+	png_structp png_ptr;
+	png_infop info_ptr;
+	unsigned int sig_read = 0;
+	png_uint_32 width, height, x, y;
+	int bit_depth, color_type, interlace_type;
+	u32* line;
+	FILE *fp;
+	Image* image = (Image*) malloc(sizeof(Image));
+	if (!image) return NULL;
+
+	if ((fp = fopen(filename, "rb")) == NULL) return NULL;
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (png_ptr == NULL) {
+		free(image);
+		fclose(fp);
+		return NULL;;
 	}
-	
-	SETDEST
-	int x = luaL_checkint(L, 1);
-	int y = luaL_checkint(L, 2);
-	Color color = (argc == 4)?*toColor(L, 3):0;
-	
-	if(dest) 
-	{
-		if (x >= 0 && y >= 0 && x < dest->imageWidth && y < dest->imageHeight) 
-		{
-			if(argc==3) 
-			{
-				*pushColor(L) = getPixelImage(x, y, dest);
-				return 1;
-			} 
-			else 
-			{
-				putPixelImage(color, x, y, dest);
-				return 0;
+	png_set_error_fn(png_ptr, (png_voidp) NULL, (png_error_ptr) NULL, user_warning_fn);
+	info_ptr = png_create_info_struct(png_ptr);
+	if (info_ptr == NULL) {
+		free(image);
+		fclose(fp);
+		png_destroy_read_struct(&png_ptr, png_infopp_NULL, png_infopp_NULL);
+		return NULL;
+	}
+	png_init_io(png_ptr, fp);
+	png_set_sig_bytes(png_ptr, sig_read);
+	png_read_info(png_ptr, info_ptr);
+	png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, &interlace_type, int_p_NULL, int_p_NULL);
+	if (width > 512 || height > 512) {
+		free(image);
+		fclose(fp);
+		png_destroy_read_struct(&png_ptr, png_infopp_NULL, png_infopp_NULL);
+		return NULL;
+	}
+	image->imageWidth = width;
+	image->imageHeight = height;
+	image->textureWidth = getNextPower2(width);
+	image->textureHeight = getNextPower2(height);
+	png_set_strip_16(png_ptr);
+	png_set_packing(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_PALETTE) png_set_palette_to_rgb(png_ptr);
+	if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth < 8) png_set_gray_1_2_4_to_8(png_ptr);
+	if (png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) png_set_tRNS_to_alpha(png_ptr);
+	png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
+	image->data = (Color*) memalign(16, image->textureWidth * image->textureHeight * sizeof(Color));
+	if (!image->data) {
+		free(image);
+		fclose(fp);
+		png_destroy_read_struct(&png_ptr, png_infopp_NULL, png_infopp_NULL);
+		return NULL;
+	}
+	line = (u32*) malloc(width * 4);
+	if (!line) {
+		free(image->data);
+		free(image);
+		fclose(fp);
+		png_destroy_read_struct(&png_ptr, png_infopp_NULL, png_infopp_NULL);
+		return NULL;
+	}
+	for (y = 0; y < height; y++) {
+		png_read_row(png_ptr, (u8*) line, png_bytep_NULL);
+		for (x = 0; x < width; x++) {
+			u32 color = line[x];
+			image->data[x + y * image->textureWidth] =  color;
+		}
+	}
+	free(line);
+	png_read_end(png_ptr, info_ptr);
+	png_destroy_read_struct(&png_ptr, &info_ptr, png_infopp_NULL);
+	fclose(fp);
+	return image;
+}
+
+Image* loadJpegImage(const char* filename)
+{
+	struct jpeg_decompress_struct dinfo;
+	struct jpeg_error_mgr jerr;
+	dinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_decompress(&dinfo);
+	FILE* inFile = fopen(filename, "rb");
+	if (!inFile) {
+		jpeg_destroy_decompress(&dinfo);
+		return NULL;
+	}
+	jpeg_stdio_src(&dinfo, inFile);
+	jpeg_read_header(&dinfo, TRUE);
+	int width = dinfo.image_width;
+	int height = dinfo.image_height;
+	jpeg_start_decompress(&dinfo);
+	Image* image = (Image*) malloc(sizeof(Image));
+	if (!image) {
+		jpeg_destroy_decompress(&dinfo);
+		fclose(inFile);
+		return NULL;
+	}
+	image->imageWidth = width;
+	image->imageHeight = height;
+	image->textureWidth = getNextPower2(width);
+	image->textureHeight = getNextPower2(height);
+	image->data = (Color*) memalign(16, image->textureWidth * image->textureHeight * sizeof(Color));
+	u8* line = (u8*) malloc(width * 3);
+	if (!line) {
+		jpeg_destroy_decompress(&dinfo);
+		fclose(inFile);
+		return NULL;
+	}
+	if (dinfo.jpeg_color_space == JCS_GRAYSCALE) {
+		while (dinfo.output_scanline < dinfo.output_height) {
+			int y = dinfo.output_scanline;
+			jpeg_read_scanlines(&dinfo, &line, 1);
+			int x;
+			for (x = 0; x < width; x++) {
+				Color c = line[x];
+				image->data[x + image->textureWidth * y] = c | (c << 8) | (c << 16) | 0xff000000;;
 			}
 		}
-	} 
-	else 
-	{
-		if (x >= 0 && y >= 0 && x < SCREEN_WIDTH && y < SCREEN_HEIGHT) 
-		{
-			if(argc==3) 
-			{
-				*pushColor(L) = getPixelScreen(x, y);
-				return 1;
-			} 
-			else 
-			{
-				putPixelScreen(color, x, y);
-				return 0;
+	} else {
+		while (dinfo.output_scanline < dinfo.output_height) {
+			int y = dinfo.output_scanline;
+			jpeg_read_scanlines(&dinfo, &line, 1);
+			u8* linePointer = line;
+			int x;
+			for (x = 0; x < width; x++) {
+				Color c = *(linePointer++);
+				c |= (*(linePointer++)) << 8;
+				c |= (*(linePointer++)) << 16;
+				image->data[x + image->textureWidth * y] = c | 0xff000000;
 			}
 		}
 	}
-
-	return luaL_error(L, "Image:pixel() : An argument was incorrect.");
+	jpeg_finish_decompress(&dinfo);
+	jpeg_destroy_decompress(&dinfo);
+	free(line);
+	fclose(inFile);
+	return image;
 }
 
-//Print text to the sceen or image
-static int lua_ImagePrint(lua_State *L) 
+void blitImageToImage(int sx, int sy, int width, int height, Image* source, int dx, int dy, Image* destination)
 {
-	int argc = lua_gettop(L);
-	if (argc != 4 && argc != 5)
-	{
-		return luaL_error(L, "image:print takes a minimum of 4 arguments");
+	Color* destinationData = &destination->data[destination->textureWidth * dy + dx];
+	int destinationSkipX = destination->textureWidth - width;
+	Color* sourceData = &source->data[source->textureWidth * sy + sx];
+	int sourceSkipX = source->textureWidth - width;
+	int x, y;
+	for (y = 0; y < height; y++, destinationData += destinationSkipX, sourceData += sourceSkipX) {
+		for (x = 0; x < width; x++, destinationData++, sourceData++) {
+			*destinationData = *sourceData;
+		}
+	}
+}
+
+void blitImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy)
+{
+	if (!initialized) return;
+	Color* vram = getVramDrawBuffer();
+	sceKernelDcacheWritebackInvalidateAll();
+	guStart();
+	sceGuCopyImage(GU_PSM_8888, sx, sy, width, height, source->textureWidth, source->data, dx, dy, PSP_LINE_SIZE, vram);
+	sceGuFinish();
+	sceGuSync(0,0);
+}
+
+void blitAlphaImageToImage(int sx, int sy, int width, int height, Image* source, int dx, int dy, Image* destination)
+{
+	Color* destinationData = &destination->data[destination->textureWidth * dy + dx];
+	int destinationSkipX = destination->textureWidth - width;
+	Color* sourceData = &source->data[source->textureWidth * sy + sx];
+	int sourceSkipX = source->textureWidth - width;
+	int x, y;
+	s32 rcolorc, gcolorc, bcolorc, acolorc,rcolord, gcolord, bcolord, acolord;
+	for (y = 0; y < height; y++, destinationData += destinationSkipX, sourceData += sourceSkipX) {
+		for (x = 0; x < width; x++, destinationData++, sourceData++) {
+			Color color = *sourceData;
+			if (!IS_ALPHA(color)) {
+				*destinationData = color;
+			} else {
+				rcolorc = color & 0xff;
+				gcolorc = (color >> 8) & 0xff;
+				bcolorc = (color >> 16) & 0xff;
+				acolorc = (color >> 24) & 0xff;
+				rcolord = *destinationData & 0xff;
+				gcolord = (*destinationData >> 8) & 0xff;
+				bcolord = (*destinationData >> 16) & 0xff;
+				acolord = (*destinationData >> 24) & 0xff;
+				
+				rcolorc = ((acolorc*rcolorc)>>8) + (((255-acolorc) * rcolord)>>8);
+				if (rcolorc > 255) rcolorc = 255;
+				gcolorc = ((acolorc*gcolorc)>>8) + (((255-acolorc) * gcolord)>>8);
+				if (gcolorc > 255) gcolorc = 255;
+				bcolorc = ((acolorc*bcolorc)>>8) + (((255-acolorc) * bcolord)>>8);
+				if (bcolorc > 255) bcolorc = 255;
+				if (acolord + acolorc < 255) {
+					acolorc = acolord+acolorc;
+				} else {
+					acolorc = 255;
+				}
+				*destinationData = rcolorc | (gcolorc << 8) | (bcolorc << 16) | (acolorc << 24);
+			}
+		}
+	}
+}
+
+void blitAlphaImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy)
+{
+	if (!initialized) return;
+
+	sceKernelDcacheWritebackInvalidateAll();
+	guStart();
+	sceGuTexImage(0, source->textureWidth, source->textureHeight, source->textureWidth, (void*) source->data);
+	float u = 1.0f / ((float)source->textureWidth);
+	float v = 1.0f / ((float)source->textureHeight);
+	sceGuTexScale(u, v);
+	
+	int j = 0;
+	while (j < width) {
+		Vertex* vertices = (Vertex*) sceGuGetMemory(2 * sizeof(Vertex));
+		int sliceWidth = 64;
+		if (j + sliceWidth > width) sliceWidth = width - j;
+		vertices[0].u = sx + j;
+		vertices[0].v = sy;
+		vertices[0].x = dx + j;
+		vertices[0].y = dy;
+		vertices[0].z = 0;
+		vertices[1].u = sx + j + sliceWidth;
+		vertices[1].v = sy + height;
+		vertices[1].x = dx + j + sliceWidth;
+		vertices[1].y = dy + height;
+		vertices[1].z = 0;
+		sceGuDrawArray(GU_SPRITES, GU_TEXTURE_16BIT | GU_VERTEX_16BIT | GU_TRANSFORM_2D, 2, 0, vertices);
+		j += sliceWidth;
 	}
 	
-	SETDEST
-	int x = luaL_checkint(L, 1);
-	int y = luaL_checkint(L, 2);
-	const char* text = luaL_checkstring(L, 3);
-	Color color = (argc == 5)?*toColor(L, 4):0xFF000000;
-	
-	if (!dest) 
-	{
-		printTextScreen(x, y, text, color);
-	} 
-	else
-	{
-		printTextImage(x, y, text, color, dest);
-	}
-	
-	return 0;
+	sceGuFinish();
+	sceGuSync(0, 0);
 }
 
-//Returns an images width
-static int lua_ImageWidth(lua_State *L) 
+Image* createImage(int width, int height)
 {
-	int argc = lua_gettop(L);
-	if(argc != 1)
-	{
-		return luaL_error(L, "Image:width() must be called with a colon, and takes no arguments");
-	}
-	
-	SETDEST
-	if(dest) lua_pushnumber(L, dest->imageWidth);
-	else lua_pushnumber(L, SCREEN_WIDTH);
-	
-	return 1;
+	Image* image = (Image*) malloc(sizeof(Image));
+	if (!image) return NULL;
+	image->imageWidth = width;
+	image->imageHeight = height;
+	image->textureWidth = getNextPower2(width);
+	image->textureHeight = getNextPower2(height);
+	image->data = (Color*) memalign(16, image->textureWidth * image->textureHeight * sizeof(Color));
+	if (!image->data) return NULL;
+	memset(image->data, 0, image->textureWidth * image->textureHeight * sizeof(Color));
+	return image;
 }
 
-//Returns an image's height
-static int lua_ImageHeight(lua_State *L) 
+void freeImage(Image* image)
 {
-	int argc = lua_gettop(L);
-	if(argc != 1)
-	{
-		return luaL_error(L, "Image:width() must be called with a colon, and takes no arguments");
-	}
-	
-	SETDEST
-	if(dest) lua_pushnumber(L, dest->imageHeight);
-	else lua_pushnumber(L, SCREEN_HEIGHT);
-	
-	return 1;
+	free(image->data);
+	free(image);
 }
 
-//Saves an image to file
-static int lua_ImageSave(lua_State *L) 
+void clearImage(Color color, Image* image)
 {
-	if (lua_gettop(L) != 2)
-	{
-		return luaL_error(L, "image:save(filename) takes 1 argument (the filename and path)");
-	}
-	
-	const char *filename = luaL_checkstring(L, 2);
-	
-	SETDEST
-	if (dest) 
-	{
-		saveImage(filename, dest->data, dest->imageWidth, dest->imageHeight, dest->textureWidth, 1);
-	} 
-	else 
-	{
-		saveImage(filename, getVramDisplayBuffer(), SCREEN_WIDTH, SCREEN_HEIGHT, PSP_LINE_SIZE, 0);
-	}
-	return 0;
-}
-
-static int lua_ImageToString (lua_State *L) 
-{
-	lua_ImageWidth(L);
-	int w = luaL_checkint(L, 2); lua_pop(L, 1);
-	lua_ImageHeight(L);
-	int h = luaL_checkint(L, 2); lua_pop(L, 1);
-
-	char buff[32];
-	sprintf(buff, "%p", *toImage(L, 1));
-	lua_pushfstring(L, "Image (%s) [%d, %d]", buff, w, h);
-	return 1;
-}
-
-//Free an Image
-static int lua_ImageFree(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if (argc !=1)
-	{	
-		return luaL_error(L, "Image.free() takes 1 arguments (the image to free)");
-	}
-
-	lua_gc(L, LUA_GCCOLLECT, 0);			
-	freeImage(*toImage(L, 1));
-	
-	return 0;
-}
-
-//Swizzle an Image
-static int lua_ImageSwizzle(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if (argc !=1)
-	{	
-		return luaL_error(L, "Image.swizzle() takes 1 argument (the image to swizzle)");
-	}
-	
-	swizzle(*toImage(L, 1));
-	
-	return 0;
-}
-
-//UnSwizzle an Image
-static int lua_ImageUnSwizzle(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if (argc !=1)
-	{	
-		return luaL_error(L, "Image.unSwizzle() takes 1 argument (the image to unSwizzle)");
-	}
-	
-	unSwizzleFast(*toImage(L, 1));
-	
-	return 0;
-}
-
-//Move an Image to Vram
-static int lua_ImageToVram(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if (argc !=1)
-	{	
-		return luaL_error(L, "Image.unSwizzle() takes 1 argument (the image to unSwizzle)");
-	}
-	
-	moveImageToVram(*toImage(L, 1));
-	
-	return 1;
-}
-
-//Register our Image Functions
-static const luaL_reg Image_methods[] = {
-	{"swizzle",			lua_ImageSwizzle},
-	{"unSwizzle",		lua_ImageUnSwizzle},
-	{"toVram",			lua_ImageToVram},
-	{"free", 			lua_ImageFree},
-	{"createEmpty", 	lua_ImageCreateEmpty},
-	{"load", 			lua_ImageLoad},
-	{"blit", 			lua_ImageBlit},
-	{"clear", 			lua_ImageClear},
-	{"slowClear", 		lua_ImageSlowClear},
-	{"fillRect", 		lua_ImageFillRect},
-	{"drawLine", 		lua_ImageDrawLine},
-	{"pixel", 			lua_ImagePixel},
-	{"print", 			lua_ImagePrint},
-	{"width", 			lua_ImageWidth},
-	{"height", 			lua_ImageHeight},
-	{"save", 			lua_ImageSave},
-	{0,0}
-};
-
-static const luaL_reg Image_meta[] = {
-	{"__tostring", lua_ImageToString},
-	{0,0}
-};
-
-UserdataRegister(Image, Image_methods, Image_meta)
-
-/******************************************************************************
- ** intraFont *******************************************************************
- *******************************************************************************/
- 
-UserdataStubs(IntraFont, intraFont*);
-
-// Init intraFont
-static int lua_intraFontInit(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 0) return luaL_error(L, "intraFont.init() takes no arguments");
-	
-	int ret = intraFontInit();
-	
-	lua_pushnumber(L, ret);
-	
-	return 0;
-}
-
-// Shutdown intraFont
-static int lua_intraFontShutdown(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 0) return luaL_error(L, "intraFont.shutdown() takes no arguments");
-	
-	intraFontShutdown();
-	
-	return 0;
-}
-
-// Load a pgf font
-static int lua_intraFontLoad(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 2) return luaL_error(L, "intraFont.load() takes 2 arguments");
-	
-	lua_gc(L, LUA_GCCOLLECT, 0);
-	int options = luaL_checkint(L, 2);
-	intraFont* ifont = intraFontLoad(luaL_checkstring(L, 1), options);
-	
-	if(!ifont) return luaL_error(L, "intraFont.load: Error loading font.");
-	intraFont** luaintraFont = pushIntraFont(L);
-	*luaintraFont = ifont;
-	
-	return 1;
-}
-
-// Free the specified font.
-static int lua_intraFontUnload(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 1) return luaL_error(L, "intraFont.unload() takes 0 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	
-	intraFontUnload(ifont);
-	
-	return 0;
-}
-
-// Activate the specified font
-static int lua_intraFontActivate(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 1) return luaL_error(L, "intraFont.activate() takes 0 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	
-	intraFontActivate(ifont);
-	
-	return 0;
-}
-
-// Set font style
-static int lua_intraFontSetStyle(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 5) return luaL_error(L, "intraFont.setStyle() takes 4 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float size = luaL_checknumber(L, 2);
-	Color color = *toColor(L, 3);
-	Color shadowColor = *toColor(L, 4);
-	int options = luaL_checkint(L, 5);
-	
-	intraFontSetStyle(ifont, size, color, shadowColor, options);
-	
-	return 0;
-}
-
-// Set type of string encoding to be used in intraFontPrint[f]
-static int lua_intraFontSetEncoding(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 2) return luaL_error(L, "intraFont.setEncoding() takes 1 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	int options = luaL_checkint(L, 2);
-	
-	intraFontSetEncoding(ifont, options);
-	
-	return 0;
-}
-
-// Set alternative font
-static int lua_intraFontSetAltFont(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 2) return luaL_error(L, "intraFont.setAltFont() takes 1 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	intraFont* alt_ifont = *toIntraFont(L, 2);
-	
-	intraFontSetAltFont(ifont, alt_ifont);
-	
-	return 0;
-}
-
-// Measure a length of text if it were to be drawn
-static int lua_intraFontMeasureText(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 2) return luaL_error(L, "intraFont.measureText() takes 1 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	
-	float ret = intraFontMeasureText(ifont, luaL_checkstring(L, 2));
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
-}
-
-// Measure a length of text if it were to be drawn
-static int lua_intraFontMeasureTextEx(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 3) return luaL_error(L, "intraFont.measureTextEx() takes 2 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	int len = luaL_checkint(L, 3);
-	
-	float ret = intraFontMeasureTextEx(ifont, luaL_checkstring(L, 2), len);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
-}
-
-// Measure a length of UCS-2 encoded text if it were to be drawn
-static int lua_intraFontMeasureTextUCS2(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if(argc != 2) return luaL_error(L, "intraFont.measureTextUCS2() takes 1 arguments, and it must be called from an instance with a colon.");
-	if (lua_type(L, 2) != LUA_TTABLE) return luaL_error(L, "UCS-2 table missing");
-
-	intraFont* ifont = *toIntraFont(L, 1);
-	
-	int n = luaL_getn(L, 2);
-	unsigned short *text = (unsigned short*)memalign(16, (n+1) * sizeof(unsigned short));
-	
 	int i;
-	for (i=0; i<n; i++)
-	{
-		lua_rawgeti(L, 2, i+1);
-		text[i] = (unsigned short)luaL_checknumber(L, -1);
-	}	
-	
-	text[n] = 0;
-	
-	float ret = intraFontMeasureTextUCS2(ifont, text);
-	
-	lua_pushnumber(L, ret);
-	
-	free(text);
-	
-	return 1;
+	int size = image->textureWidth * image->textureHeight;
+	Color* data = image->data;
+	for (i = 0; i < size; i++, data++) *data = color;
 }
 
-// Measure a length of UCS-2 encoded text if it were to be drawn
-static int lua_intraFontMeasureTextUCS2Ex(lua_State *L)
+void clearScreen(Color color)
 {
-	int argc = lua_gettop(L);
-	if(argc != 3) return luaL_error(L, "intraFont.measureTextUCS2Ex() takes 2 arguments, and it must be called from an instance with a colon.");
-	if (lua_type(L, 2) != LUA_TTABLE) return luaL_error(L, "UCS-2 table missing");
-
-	intraFont* ifont = *toIntraFont(L, 1);
-	int len = luaL_checkint(L, 3);
-	
-	int n = luaL_getn(L, 2);
-	unsigned short *text = (unsigned short*)memalign(16, (n+1) * sizeof(unsigned short));
-	
-	int i;
-	for (i=0; i<n; i++)
-	{
-		lua_rawgeti(L, 2, i+1);
-		text[i] = (unsigned short)luaL_checknumber(L, -1);
-	}	
-	
-	text[n] = 0;
-	
-	float ret = intraFontMeasureTextUCS2Ex(ifont, text, len);
-	
-	lua_pushnumber(L, ret);
-	
-	free(text);
-	
-	return 1;
+	if (!initialized) return;
+	guStart();
+	sceGuClearColor(color);
+	sceGuClearDepth(0);
+	sceGuClear(GU_COLOR_BUFFER_BIT|GU_DEPTH_BUFFER_BIT);
+	sceGuFinish();
+	sceGuSync(0, 0);
 }
 
-// Draw text 
-static int lua_intraFontPrint(lua_State *L)
+void fillImageRect(Color color, int x0, int y0, int width, int height, Image* image)
 {
-	int argc = lua_gettop(L);
-	if(argc != 4) return luaL_error(L, "intraFont.print() takes 3 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	
-	float ret = intraFontPrint(ifont, x, y, luaL_checkstring(L, 4));
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	int skipX = image->textureWidth - width;
+	int x, y;
+	Color* data = image->data + x0 + y0 * image->textureWidth;
+	for (y = 0; y < height; y++, data += skipX) {
+		for (x = 0; x < width; x++, data++) *data = color;
+	}
 }
 
-// Draw text 
-static int lua_intraFontPrintEx(lua_State *L)
+void fillScreenRect(Color color, int x0, int y0, int width, int height)
 {
-	int argc = lua_gettop(L);
-	if(argc != 5) return luaL_error(L, "intraFont.printEx() takes 4 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	int len = luaL_checkint(L, 5);
-	
-	float ret = intraFontPrintEx(ifont, x, y, luaL_checkstring(L, 4), len);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	if (!initialized) return;
+	int skipX = PSP_LINE_SIZE - width;
+	int x, y;
+	Color* data = getVramDrawBuffer() + x0 + y0 * PSP_LINE_SIZE;
+	for (y = 0; y < height; y++, data += skipX) {
+		for (x = 0; x < width; x++, data++) *data = color;
+	}
 }
 
-// Draw text 
-static int lua_intraFontPrintColumn(lua_State *L)
+void putPixelScreen(Color color, int x, int y)
 {
-	int argc = lua_gettop(L);
-	if(argc != 5) return luaL_error(L, "intraFont.printColumn() takes 4 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	float w = luaL_checknumber(L, 4);
-	
-	float ret = intraFontPrintColumn(ifont, x, y, w, luaL_checkstring(L, 5));
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	Color* vram = getVramDrawBuffer();
+	vram[PSP_LINE_SIZE * y + x] = color;
 }
 
-// Draw text 
-static int lua_intraFontPrintColumnEx(lua_State *L)
+void putPixelImage(Color color, int x, int y, Image* image)
 {
-	int argc = lua_gettop(L);
-	if(argc != 6) return luaL_error(L, "intraFont.printColumnEx() takes 5 arguments, and it must be called from an instance with a colon.");
-	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	float w = luaL_checknumber(L, 4);
-	int len = luaL_checkint(L, 6);
-	
-	float ret = intraFontPrintColumnEx(ifont, x, y, w, luaL_checkstring(L, 5), len);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	image->data[x + y * image->textureWidth] = color;
 }
 
-// Draw UCS-2 encoded text
-static int lua_intraFontPrintUCS2(lua_State *L)
+Color getPixelScreen(int x, int y)
 {
-	int argc = lua_gettop(L);
-	if(argc != 4) return luaL_error(L, "intraFont.printUCS2() takes 3 arguments, and it must be called from an instance with a colon.");
-	if (lua_type(L, 4) != LUA_TTABLE) return luaL_error(L, "UCS-2 table missing");
-
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	
-	int n = luaL_getn(L, 4);
-	unsigned short *text = (unsigned short*)memalign(16, (n+1) * sizeof(unsigned short));
-	
-	int i;
-	for (i=0; i<n; i++)
-	{
-		lua_rawgeti(L, 4, i+1);
-		text[i] = (unsigned short)luaL_checknumber(L, -1);
-	}	
-	
-	text[n] = 0;
-	
-	
-	float ret = intraFontPrintUCS2(ifont, x, y, text);
-	
-	free(text);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	Color* vram = getVramDrawBuffer();
+	return vram[PSP_LINE_SIZE * y + x];
 }
 
-// Draw UCS-2 encoded text
-static int lua_intraFontPrintUCS2Ex(lua_State *L)
+Color getPixelImage(int x, int y, Image* image)
 {
-	int argc = lua_gettop(L);
-	if(argc != 5) return luaL_error(L, "intraFont.printUCS2Ex() takes 4 arguments, and it must be called from an instance with a colon.");
-	if (lua_type(L, 4) != LUA_TTABLE) return luaL_error(L, "UCS-2 table missing");
-
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	int len = luaL_checkint(L, 5);
-	
-	int n = luaL_getn(L, 4);
-	unsigned short *text = (unsigned short*)memalign(16, (n+1) * sizeof(unsigned short));
-	
-	int i;
-	for (i=0; i<n; i++)
-	{
-		lua_rawgeti(L, 4, i+1);
-		text[i] = (unsigned short)luaL_checknumber(L, -1);
-	}	
-	
-	text[n] = 0;
-	
-	
-	float ret = intraFontPrintUCS2Ex(ifont, x, y, text, len);
-	
-	free(text);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	return image->data[x + y * image->textureWidth];
 }
 
-// Draw UCS-2 encoded text
-static int lua_intraFontPrintColumnUCS2(lua_State *L)
+void printTextScreen(int x, int y, const char* text, u32 color)
 {
-	int argc = lua_gettop(L);
-	if(argc != 5) return luaL_error(L, "intraFont.printColumnUCS2() takes 4 arguments, and it must be called from an instance with a colon.");
-	if (lua_type(L, 5) != LUA_TTABLE) return luaL_error(L, "UCS-2 table missing");
+	int i, j, l;
+	u8 *font;
+	Color *vram_ptr;
+	Color *vram;
 	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	float w = luaL_checknumber(L, 4);
-	
-	int n = luaL_getn(L, 5);
-	unsigned short *text = (unsigned short*)memalign(16, (n+1) * sizeof(unsigned short));
-	
-	int i;
-	for (i=0; i<n; i++)
-	{
-		lua_rawgeti(L, 5, i+1);
-		text[i] = (unsigned short)luaL_checknumber(L, -1);
-	}	
-	
-	text[n] = 0;
-	
-	float ret = intraFontPrintColumnUCS2(ifont, x, y, w, text);
-	
-	free(text);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	if (!initialized) return;
+	size_t c;
+	for (c = 0; c < strlen(text); c++) {
+		if (x < 0 || x + 8 > SCREEN_WIDTH || y < 0 || y + 8 > SCREEN_HEIGHT) break;
+		char ch = text[c];
+		vram = getVramDrawBuffer() + x + y * PSP_LINE_SIZE;
+		
+		font = &msx[ (int)ch * 8];
+		for (i = l = 0; i < 8; i++, l += 8, font++) {
+			vram_ptr  = vram;
+			for (j = 0; j < 8; j++) {
+				if ((*font & (128 >> j))) *vram_ptr = color;
+				vram_ptr++;
+			}
+			vram += PSP_LINE_SIZE;
+		}
+		x += 8;
+	}
 }
 
-// Draw UCS-2 encoded text
-static int lua_intraFontPrintColumnUCS2Ex(lua_State *L)
+void printTextImage(int x, int y, const char* text, u32 color, Image* image)
 {
-	int argc = lua_gettop(L);
-	if(argc != 6) return luaL_error(L, "intraFont.printColumnUCS2Ex() takes 5 arguments, and it must be called from an instance with a colon.");
-	if (lua_type(L, 5) != LUA_TTABLE) return luaL_error(L, "UCS-2 table missing");
+	int i, j, l;
+	u8 *font;
+	Color *data_ptr;
+	Color *data;
 	
-	intraFont* ifont = *toIntraFont(L, 1);
-	float x = luaL_checknumber(L, 2);
-	float y = luaL_checknumber(L, 3);
-	float w = luaL_checknumber(L, 4);
-	int len = luaL_checkint(L, 6);
-	
-	int n = luaL_getn(L, 5);
-	unsigned short *text = (unsigned short*)memalign(16, (n+1) * sizeof(unsigned short));
-	
-	int i;
-	for (i=0; i<n; i++)
-	{
-		lua_rawgeti(L, 5, i+1);
-		text[i] = (unsigned short)luaL_checknumber(L, -1);
-	}	
-	
-	text[n] = 0;
-	
-	float ret = intraFontPrintColumnUCS2Ex(ifont, x, y, w, text, len);
-	
-	free(text);
-	
-	lua_pushnumber(L, ret);
-	
-	return 1;
+	if (!initialized) return;
+	size_t c;
+	for (c = 0; c < strlen(text); c++) {
+		if (x < 0 || x + 8 > image->imageWidth || y < 0 || y + 8 > image->imageHeight) break;
+		char ch = text[c];
+		data = image->data + x + y * image->textureWidth;
+		
+		font = &msx[ (int)ch * 8];
+		for (i = l = 0; i < 8; i++, l += 8, font++) {
+			data_ptr  = data;
+			for (j = 0; j < 8; j++) {
+				if ((*font & (128 >> j))) *data_ptr = color;
+				data_ptr++;
+			}
+			data += image->textureWidth;
+		}
+		x += 8;
+	}
 }
 
-//Register our intraFont Functions
-static const luaL_reg intraFont_methods[] = {
-	// {"init",				lua_intraFontInit},	
-	// {"shutdown",			lua_intraFontShutdown},
-	{"load",				lua_intraFontLoad},
-	{"unload",				lua_intraFontUnload},
-	{"activate",			lua_intraFontActivate},
-	{"setStyle",			lua_intraFontSetStyle},
-	{"setEncoding",			lua_intraFontSetEncoding},
-	{"setAltFont",			lua_intraFontSetAltFont},
-	{"measureText",			lua_intraFontMeasureText},
-	{"measureTextEx",		lua_intraFontMeasureTextEx},
-	{"measureTextUCS2",		lua_intraFontMeasureTextUCS2},
-	{"measureTextUCS2Ex",	lua_intraFontMeasureTextUCS2Ex},
-	{"print",				lua_intraFontPrint},
-	{"printEx",				lua_intraFontPrintEx},
-	{"printColumn",			lua_intraFontPrintColumn},
-	{"printColumnEx",		lua_intraFontPrintColumnEx},
-	{"printUCS2",			lua_intraFontPrintUCS2},
-	{"printUCS2Ex",			lua_intraFontPrintUCS2Ex},
-	{"printColumnUCS2",		lua_intraFontPrintColumnUCS2},
-	{"printColumnUCS2Ex",	lua_intraFontPrintColumnUCS2Ex},
-	{0,0}
-};
-
-static const luaL_reg intraFont_meta[] = {
-	{0,0}
-};
-
-UserdataRegister(IntraFont, intraFont_methods, intraFont_meta);
-
-static int Color_new (lua_State *L) {
-	int argc = lua_gettop(L); 
-	if (argc != 3 && argc != 4) return luaL_error(L, "Color.new(r, g, b, [a]) takes either three color arguments or three color arguments and an alpha value."); 
+static void fontPrintTextImpl(FT_Bitmap* bitmap, int xofs, int yofs, Color color, Color* framebuffer, int width, int height, int lineSize)
+{
+	u8 rf = color & 0xff; 
+	u8 gf = (color >> 8) & 0xff;
+	u8 bf = (color >> 16) & 0xff;
 	
-	Color *color = pushColor(L);
-	
-	unsigned r = CLAMP(luaL_checkint(L, 1), 0, 255); 
-	unsigned g = CLAMP(luaL_checkint(L, 2), 0, 255); 
-	unsigned b = CLAMP(luaL_checkint(L, 3), 0, 255);
-	unsigned a;
-	if (argc == 4) {
-		a = CLAMP(luaL_checkint(L, 4), 0, 255);
+	u8* line = bitmap->buffer;
+	Color* fbLine = framebuffer + xofs + yofs * lineSize;
+	int y;
+	int x;
+	for (y = 0; y < bitmap->rows; y++) {
+		u8* column = line;
+		Color* fbColumn = fbLine;
+		for (x = 0; x < bitmap->width; x++) {
+			if (x + xofs < width && x + xofs >= 0 && y + yofs < height && y + yofs >= 0) {
+				u8 val = *column;
+				color = *fbColumn;
+				u8 r = color & 0xff; 
+				u8 g = (color >> 8) & 0xff;
+				u8 b = (color >> 16) & 0xff;
+				u8 a = (color >> 24) & 0xff;
+				r = rf * val / 255 + (255 - val) * r / 255;
+				g = gf * val / 255 + (255 - val) * g / 255;
+				b = bf * val / 255 + (255 - val) * b / 255;
+				*fbColumn = r | (g << 8) | (b << 16) | (a << 24);
+			}
+			column++;
+			fbColumn++;
+		}
+		line += bitmap->pitch;
+		fbLine += lineSize;
+	}
+}
+
+void fontPrintTextImage(FT_Bitmap* bitmap, int x, int y, Color color, Image* image)
+{
+	fontPrintTextImpl(bitmap, x, y, color, image->data, image->imageWidth, image->imageHeight, image->textureWidth);
+}
+
+void fontPrintTextScreen(FT_Bitmap* bitmap, int x, int y, Color color)
+{
+	fontPrintTextImpl(bitmap, x, y, color, getVramDrawBuffer(), SCREEN_WIDTH, SCREEN_HEIGHT, PSP_LINE_SIZE);
+}
+
+void saveImage(const char* filename, Color* data, int width, int height, int lineSize, int saveAlpha)
+{
+	if (isJpegFile(filename)) {
+		saveJpegImage(filename, data, width, height, lineSize);
 	} else {
-		a = 255;
+		savePngImage(filename, data, width, height, lineSize, saveAlpha);
 	}
-
-	//*color = ((b>>3)<<10) | ((g>>3)<<5) | (r>>3) | (a == 255 ? 0x8000 : 0);
-	*color = a << 24 | b << 16 | g << 8 | r;
-	
-	return 1;
 }
 
-static int Color_colors (lua_State *L) {
-	int argc = lua_gettop(L);
-	if(argc != 1) return luaL_error(L, "color:colors() takes no arguments, and it must be called from an instance with a colon.");
-	Color color = *toColor(L, 1);
-	int r = R(color); 
-	int g = G(color);
-	int b = B(color);
-	int a = A(color);
+void savePngImage(const char* filename, Color* data, int width, int height, int lineSize, int saveAlpha)
+{
+	png_structp png_ptr;
+	png_infop info_ptr;
+	FILE* fp;
+	int i, x, y;
+	u8* line;
 	
-	lua_newtable(L);
-	lua_pushstring(L, "r"); lua_pushnumber(L, r); lua_settable(L, -3);
-	lua_pushstring(L, "g"); lua_pushnumber(L, g); lua_settable(L, -3);
-	lua_pushstring(L, "b"); lua_pushnumber(L, b); lua_settable(L, -3);
-	lua_pushstring(L, "a"); lua_pushnumber(L, a); lua_settable(L, -3);
-
-	return 1;
+	if ((fp = fopen(filename, "wb")) == NULL) return;
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+	if (!png_ptr) return;
+	info_ptr = png_create_info_struct(png_ptr);
+	if (!info_ptr) {
+		png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+		return;
+	}
+	png_init_io(png_ptr, fp);
+	png_set_IHDR(png_ptr, info_ptr, width, height, 8,
+		saveAlpha ? PNG_COLOR_TYPE_RGBA : PNG_COLOR_TYPE_RGB,
+		PNG_INTERLACE_NONE, PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+	png_write_info(png_ptr, info_ptr);
+	line = (u8*) malloc(width * (saveAlpha ? 4 : 3));
+	for (y = 0; y < height; y++) {
+		for (i = 0, x = 0; x < width; x++) {
+			Color color = data[x + y * lineSize];
+			u8 r = color & 0xff; 
+			u8 g = (color >> 8) & 0xff;
+			u8 b = (color >> 16) & 0xff;
+			u8 a = saveAlpha ? (color >> 24) & 0xff : 0xff;
+			line[i++] = r;
+			line[i++] = g;
+			line[i++] = b;
+			if (saveAlpha) line[i++] = a;
+		}
+		png_write_row(png_ptr, line);
+	}
+	free(line);
+	png_write_end(png_ptr, info_ptr);
+	png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
+	fclose(fp);
 }
 
-static int Color_tostring (lua_State *L) {
-	Color_colors(L);
-	lua_pushstring(L, "r"); lua_gettable(L, -2); int r = luaL_checkint(L, -1); lua_pop(L, 1);
-	lua_pushstring(L, "g"); lua_gettable(L, -2); int g = luaL_checkint(L, -1); lua_pop(L, 1);
-	lua_pushstring(L, "b"); lua_gettable(L, -2); int b = luaL_checkint(L, -1); lua_pop(L, 1);
-	lua_pushstring(L, "a"); lua_gettable(L, -2); int a = luaL_checkint(L, -1); lua_pop(L, 1);
-	lua_pop(L, 1); // pop the table
-	lua_pushfstring(L, "Color (r %d, g %d, b %d, a %d)", r, g, b, a);
-	return 1;
+void saveJpegImage(const char* filename, Color* data, int width, int height, int lineSize)
+{
+	FILE* outFile = fopen(filename, "wb");
+	if (!outFile) return;
+	struct jpeg_error_mgr jerr;
+	struct jpeg_compress_struct cinfo;
+	cinfo.err = jpeg_std_error(&jerr);
+	jpeg_create_compress(&cinfo);
+	jpeg_stdio_dest(&cinfo, outFile);
+	cinfo.image_width = width;
+	cinfo.image_height = height;
+	cinfo.input_components = 3;
+	cinfo.in_color_space = JCS_RGB;
+	jpeg_set_defaults(&cinfo);
+	jpeg_set_quality(&cinfo, 100, TRUE);
+	jpeg_start_compress(&cinfo, TRUE);
+	u8* row = (u8*) malloc(width * 3);
+	if (!row) return;
+	int y;
+	int x;
+	for (y = 0; y < height; y++) {
+		u8* rowPointer = row;		
+		for (x = 0; x < width; x++) {
+			Color c = data[x + cinfo.next_scanline * lineSize];
+			*(rowPointer++) = c & 0xff;
+			*(rowPointer++) = (c >> 8) & 0xff;
+			*(rowPointer++) = (c >> 16) & 0xff;
+		}
+		jpeg_write_scanlines(&cinfo, &row, 1);
+	}
+	jpeg_finish_compress(&cinfo);
+	jpeg_destroy_compress(&cinfo);
+	fclose(outFile);
+	free(row);
 }
 
-static int Color_equal(lua_State *L) {
-	Color a = *toColor(L, 1);
-	Color b = *toColor(L, 2);
-	lua_pushboolean(L, a == b);
-	return 1;
+void flipScreen()
+{
+	if (!initialized) return;
+	sceGuSwapBuffers();
+	dispBufferNumber ^= 1;
 }
 
-static const luaL_reg Color_methods[] = {
-	{"new", Color_new},
-	{"colors", Color_colors},
-	{0,0}
-};
-
-static const luaL_reg Color_meta[] = {
-	{"__tostring", Color_tostring},
-	{"__eq", Color_equal},
-	{0,0}
-};
-
-UserdataRegister(Color, Color_methods, Color_meta)
-
-static const luaL_reg Screen_functions[] = {
-	{"flip", lua_FlipScreen},
-	{"waitVblankStart", lua_WaitVblankStart},
-	{0,0}
-};
-
-void luaGraphics_init(lua_State *L) {
-
-	IntraFont_register(L);
-	Image_register(L);
-	Color_register(L);
+static void drawLine(int x0, int y0, int x1, int y1, int color, Color* destination, int width)
+{
+	int dy = y1 - y0;
+	int dx = x1 - x0;
+	int stepx, stepy;
 	
-	// luaL_openlib(L, "IntraFont", Font_functions, 0);
-	luaL_openlib(L, "screen", Screen_functions, 0);
-	luaL_openlib(L, "screen", Image_methods, 0); 	
+	if (dy < 0) { dy = -dy;  stepy = -width; } else { stepy = width; }
+	if (dx < 0) { dx = -dx;  stepx = -1; } else { stepx = 1; }
+	dy <<= 1;
+	dx <<= 1;
+	
+	y0 *= width;
+	y1 *= width;
+	destination[x0+y0] = color;
+	if (dx > dy) {
+		int fraction = dy - (dx >> 1);
+		while (x0 != x1) {
+			if (fraction >= 0) {
+				y0 += stepy;
+				fraction -= dx;
+			}
+			x0 += stepx;
+			fraction += dy;
+			destination[x0+y0] = color;
+		}
+	} else {
+		int fraction = dx - (dy >> 1);
+		while (y0 != y1) {
+			if (fraction >= 0) {
+				x0 += stepx;
+				fraction -= dy;
+			}
+			y0 += stepy;
+			fraction += dx;
+			destination[x0+y0] = color;
+		}
+	}
+}
 
-	theScreen = lua_topointer(L, -1);
-	theScreenImage.textureWidth = 512;
-	theScreenImage.textureHeight = 512;
-	theScreenImage.imageWidth = 480;
-	theScreenImage.imageHeight = 272;
+void drawLineScreen(int x0, int y0, int x1, int y1, Color color)
+{
+	drawLine(x0, y0, x1, y1, color, getVramDrawBuffer(), PSP_LINE_SIZE);
+}
+
+void drawLineImage(int x0, int y0, int x1, int y1, Color color, Image* image)
+{
+	drawLine(x0, y0, x1, y1, color, image->data, image->textureWidth);
+}
+
+//Fast Blit Functions!
+static int fastInit = 0;
+void FastStartBlit()
+{
+	guStart();
+	fastInit = 1;
+}
+
+void FastEndBlit()
+{
+	if (!fastInit) return;
+	sceGuFinish();
+	sceGuSync(0, 0);
+	fastInit = 0;
+}
+
+void fastClearScreen(Color color)
+{
+	if (!initialized || !fastInit) return;
+	sceGuClearColor(color);
+	sceGuClearDepth(0);
+	sceGuClear(GU_COLOR_BUFFER_BIT|GU_DEPTH_BUFFER_BIT);
+}
+
+void fastBlitImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy)
+{
+	if (!initialized || !fastInit) return;
+	Color* vram = getVramDrawBuffer();
+	sceKernelDcacheWritebackInvalidateAll();
+	sceGuCopyImage(GU_PSM_8888, sx, sy, width, height, source->textureWidth, source->data, dx, dy, PSP_LINE_SIZE, vram);
+}
+
+void fastBlitAlphaImageToScreen(int sx, int sy, int width, int height, Image* source, int dx, int dy)
+{
+	if (!initialized || !fastInit) return;
+
+	sceKernelDcacheWritebackInvalidateAll();
+	sceGuTexImage(0, source->textureWidth, source->textureHeight, source->textureWidth, (void*) source->data);
+	float u = 1.0f / ((float)source->textureWidth);
+	float v = 1.0f / ((float)source->textureHeight);
+	sceGuTexScale(u, v);
 	
-#define INTRAFONT_CONSTANT(name)\
-	lua_pushstring(L, #name);\
-	lua_pushnumber(L, INTRAFONT_##name);\
-	lua_settable(L, -3);
+	int j = 0;
+	while (j < width) {
+		Vertex* vertices = (Vertex*) sceGuGetMemory(2 * sizeof(Vertex));
+		int sliceWidth = 64;
+		if (j + sliceWidth > width) sliceWidth = width - j;
+		vertices[0].u = sx + j;
+		vertices[0].v = sy;
+		vertices[0].x = dx + j;
+		vertices[0].y = dy;
+		vertices[0].z = 0;
+		vertices[1].u = sx + j + sliceWidth;
+		vertices[1].v = sy + height;
+		vertices[1].x = dx + j + sliceWidth;
+		vertices[1].y = dy + height;
+		vertices[1].z = 0;
+		sceGuDrawArray(GU_SPRITES, GU_TEXTURE_16BIT | GU_VERTEX_16BIT | GU_TRANSFORM_2D, 2, 0, vertices);
+		j += sliceWidth;
+	}
+}
+
+#define BUF_WIDTH (512)
+#define SCR_WIDTH (480)
+#define SCR_HEIGHT (272)
+#define PIXEL_SIZE (4) /* change this if you change to another screenmode */
+#define FRAME_SIZE (BUF_WIDTH * SCR_HEIGHT * PIXEL_SIZE)
+#define ZBUF_SIZE (BUF_WIDTH SCR_HEIGHT * 2) /* zbuffer seems to be 16-bit? */
+
+void initGraphics()
+{
+	dispBufferNumber = 0;
+
+	sceGuInit();
+
+	guStart();
+	sceGuDrawBuffer(GU_PSM_8888, (void*)FRAMEBUFFER_SIZE, PSP_LINE_SIZE);
+	sceGuDispBuffer(SCREEN_WIDTH, SCREEN_HEIGHT, (void*)0, PSP_LINE_SIZE);
+	sceGuClear(GU_COLOR_BUFFER_BIT | GU_DEPTH_BUFFER_BIT);
+	sceGuDepthBuffer((void*) (FRAMEBUFFER_SIZE*2), PSP_LINE_SIZE);
+	sceGuOffset(2048 - (SCREEN_WIDTH / 2), 2048 - (SCREEN_HEIGHT / 2));
+	sceGuViewport(2048, 2048, SCREEN_WIDTH, SCREEN_HEIGHT);
+	sceGuDepthRange(0xc350, 0x2710);
+	sceGuScissor(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+	sceGuEnable(GU_SCISSOR_TEST);
+	sceGuAlphaFunc(GU_GREATER, 0, 0xff);
+	sceGuEnable(GU_ALPHA_TEST);
+	sceGuDepthFunc(GU_GEQUAL);
+	sceGuEnable(GU_DEPTH_TEST);
+	sceGuFrontFace(GU_CW);
+	sceGuShadeModel(GU_SMOOTH);
+	sceGuEnable(GU_CULL_FACE);
+	sceGuEnable(GU_TEXTURE_2D);
+	sceGuEnable(GU_CLIP_PLANES);
+	sceGuTexMode(GU_PSM_8888, 0, 0, 0);
+	sceGuTexFunc(GU_TFX_REPLACE, GU_TCC_RGBA);
+	sceGuTexFilter(GU_NEAREST, GU_NEAREST);
+	sceGuAmbientColor(0xffffffff);
+	sceGuEnable(GU_BLEND);
+	sceGuBlendFunc(GU_ADD, GU_SRC_ALPHA, GU_ONE_MINUS_SRC_ALPHA, 0, 0);
+	sceGuFinish();
+	sceGuSync(0, 0);
 	
-	lua_pushstring(L, "IntraFont");
-	lua_gettable(L, LUA_GLOBALSINDEX);
-	
-	INTRAFONT_CONSTANT(ADVANCE_H)
-	INTRAFONT_CONSTANT(ADVANCE_V)
-	INTRAFONT_CONSTANT(ALIGN_LEFT)
-	INTRAFONT_CONSTANT(ALIGN_RIGHT)
-	INTRAFONT_CONSTANT(ALIGN_CENTER)
-	INTRAFONT_CONSTANT(ALIGN_FULL)
-	INTRAFONT_CONSTANT(SCROLL_LEFT)
-	INTRAFONT_CONSTANT(SCROLL_SEESAW)
-	INTRAFONT_CONSTANT(SCROLL_RIGHT)
-	INTRAFONT_CONSTANT(SCROLL_THROUGH)
-	INTRAFONT_CONSTANT(WIDTH_VAR)
-	INTRAFONT_CONSTANT(WIDTH_FIX)
-	INTRAFONT_CONSTANT(ACTIVE)
-	INTRAFONT_CONSTANT(CACHE_MED)
-	INTRAFONT_CONSTANT(CACHE_LARGE)
-	INTRAFONT_CONSTANT(CACHE_ASCII)
-	INTRAFONT_CONSTANT(CACHE_ALL)
-	INTRAFONT_CONSTANT(STRING_ASCII)
-	INTRAFONT_CONSTANT(STRING_CP437)
-	INTRAFONT_CONSTANT(STRING_CP850)
-	INTRAFONT_CONSTANT(STRING_CP850)
-	INTRAFONT_CONSTANT(STRING_CP866)
-	INTRAFONT_CONSTANT(STRING_SJIS)
-	INTRAFONT_CONSTANT(STRING_GBK)
-	INTRAFONT_CONSTANT(STRING_KOR)
-	INTRAFONT_CONSTANT(STRING_BIG5)
-	INTRAFONT_CONSTANT(STRING_CP1251)
-	INTRAFONT_CONSTANT(STRING_CP1252)
-	INTRAFONT_CONSTANT(STRING_UTF8)
-	
+	sceGuCallMode(GU_FALSE);
+
+	sceDisplayWaitVblankStart();
+	sceGuDisplay(GU_TRUE);
+	initialized = 1;
+}
+
+void disableGraphics()
+{
+	initialized = 0;
+}
+
+void guStart()
+{
+	sceGuStart(GU_DIRECT, list);
 }
