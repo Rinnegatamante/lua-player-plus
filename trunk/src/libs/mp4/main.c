@@ -131,24 +131,16 @@ AvcDecodeStruct avc_struct;
 AvcDecodeStruct* avc = &avc_struct;
 AvcCscStruct csc_struct;
 AvcCscStruct* csc = &csc_struct;
-//unsigned char RGBBuffer[4*512*512];
-//unsigned char RGBBuffer0[4*512*272];
-//unsigned char RGBBuffer1[4*512*272];
-/* ENHANCEMENT */
-//the framebuffer need to point to addresses in VRAM
 unsigned char* FrameBuffer[] = {0x44000000, (0x44000000 | 0x88000)};
-int frame_index = 0;
 char filename[1024];
 
 mp4ff_callback_t mp4_callback = {mp4_read, 0, mp4_seek, 0, 0};
 
 int PlayMp4(const char* filenamevideomp4,int debugmode)
 {
+   int frame_index = 0;
    pspDebugScreenInit();
    pspDebugScreenSetXY(0, 2);
-   //scePowerSetClockFrequency(333,333,166);
-   //scePowerSetCpuClockFrequency(333);
-   //scePowerSetBusClockFrequency(166);
    u32 cpu = scePowerGetCpuClockFrequency();
    u32 bus = scePowerGetBusClockFrequency();
    if (debugmode == 1){
@@ -183,7 +175,6 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
       goto wait;
    }
 
-   //pspDebugScreenPrintf("sps_size=%d, pps_size=%d\n", sps_size, pps_size);
 
    int result;
    //result = sceUtilityLoadAvModule(0);
@@ -191,26 +182,19 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    //   pspDebugScreenPrintf("\nerr: sceUtilityLoadAvModule(0)\n");
    //   goto wait;
    //}
-   SceUID modid;
-   int status;
+    SceUID modid;
+    int status;
 
-   modid = kuKernelLoadModule(filename, 0, NULL);
-   if(modid >= 0) {
+    modid = kuKernelLoadModule(filename, 0, NULL);
+    if(modid >= 0) {
       modid = sceKernelStartModule(modid, 0, 0, &status, NULL);
-   }
-   else {
-    if (debugmode == 1){
-      pspDebugScreenPrintf("\nerr=0x%08X : sceKernelLoadModule\n", modid);
     }
-      goto wait;
-   }
-
-//   result = pspSdkLoadStartModule("ms0:/mpeg_vsh330.prx", PSP_MEMORY_PARTITION_USER);
-//   result = sceUtilityLoadAvModule(3);
-//   if ( result < 0 ){
-//      pspDebugScreenPrintf("\nerr=0x%08X : sceUtilityLoadAvModule(3)\n", result);
-//      goto wait;
-//   }
+    // else {
+    // if (debugmode == 1){
+    //  pspDebugScreenPrintf("\nerr=0x%08X : sceKernelLoadModule\n", modid);
+    // }
+    //  goto wait;
+    // }
 
    result = sceMpegInit();
    if ( result != 0 ){
@@ -221,12 +205,8 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    }
 
    avc->mpeg_mode = 4;
-//   avc->mpeg_ddrtop = 0x09400000;
-//   avc->mpeg_au_buffer = 0x09410000;
    avc->mpeg_ddrtop =  memalign(0x400000, 0x400000);
    avc->mpeg_au_buffer = avc->mpeg_ddrtop + 0x10000;
-
-//   pspDebugScreenPrintf("\naddress=0x%08X\n", avc->mpeg_au_buffer);
 
 
    result = sceMpegQueryMemSize(avc->mpeg_mode);
@@ -237,7 +217,6 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
       goto wait;
    }
 
-//   pspDebugScreenPrintf("\n%d\n", result);
 
    avc->mpeg_buffer_size = result;
 
@@ -276,17 +255,6 @@ int PlayMp4(const char* filenamevideomp4,int debugmode)
    }
 
    unsigned char* nal_buffer = (unsigned char*)malloc_64(1024*1024);
-
-//   unsigned char sps_pps_buffer[27];
-//
-//   FILE* fp;
-//   fp = fopen("ms0:/sps_pps.dat", "rb");
-//   fread(sps_pps_buffer, 27, 1, fp);
-//   fclose(fp);
-//   sps_size = 23;
-//   pps_size = 4;
-
-   //---------------------------------------------------------------------------------//
    float curr_ms = 1.0f;
    u64 last_tick;
    sceRtcGetCurrentTick(&last_tick);
@@ -314,25 +282,12 @@ while(!(input.Buttons & PSP_CTRL_TRIANGLE)) {
    else
       avc->mpeg_nal.mode = 0;
    FILE* fp1;
-//   memset(filename,0,1024);
-//   sprintf(filename, "ms0:/mpeg%d_0.dat", frame_count);
-//   fp1 = fopen(filename, "wb");
-//   fwrite(p1, 512, 1, fp1);
-//   fclose(fp1);
 
    result = sceMpegGetAvcNalAu(&avc->mpeg, &avc->mpeg_nal, avc->mpeg_au);
-   //result = sceMpegGetAvcAu(&avc->mpeg, &avc->mpeg_nal.nal_buffer, avc->mpeg_au, 0);
    memset(filename,0,1024);
-//   sprintf(filename, "ms0:/au%d_1.dat", frame_count);
-//   fp1 = fopen(filename, "wb");
-//   fwrite(au0, 64, 1, fp1);
-//   fclose(fp1);
-//   pspDebugScreenPrintf(" GetAvcNalAu=0x%08X\n", result);
 
    result = sceMpegAvcDecode(&avc->mpeg, avc->mpeg_au, 512, 0, &pic_num);
-//   pspDebugScreenPrintf(" AvcDecode=0x%08X,0x%08X\n", result, pic_num);
    result = sceMpegAvcDecodeDetail2(&avc->mpeg, &avc->mpeg_codec_buffer);
-//   pspDebugScreenPrintf(" AvcDecodeDetail2=0x%08X\n", result);
 
 
    if ( result == 0 ) {
@@ -369,13 +324,7 @@ while(!(input.Buttons & PSP_CTRL_TRIANGLE)) {
             }
 
             result = sceMpegBaseCscAvc(FrameBuffer[frame_index],0,512,csc);
-//            pspDebugScreenPrintf(" BaseCscAvc=0x%08X\n", result);
             if ( result == 0 ) {
-//               memset(filename,0,1024);
-//               sprintf(filename, "ms0:/RGB%d.%d.dat", frame_count,i);
-//               fp1 = fopen(filename, "wb");
-//               fwrite(RGBBuffer, 4*512*512, 1, fp1);
-//               fclose(fp1);
                sceDisplayWaitVblankStart();
                int resFb = sceDisplaySetFrameBuf(FrameBuffer[frame_index], 512, PSP_DISPLAY_PIXEL_FORMAT_8888, PSP_DISPLAY_SETBUF_IMMEDIATE);
                frame_index = (frame_index+1) % 2;
@@ -384,13 +333,13 @@ while(!(input.Buttons & PSP_CTRL_TRIANGLE)) {
          }
       }
    }
-//   memset(filename,0,1024);
-//   sprintf(filename, "ms0:/mpeg%d.dat", frame_count);
-//   fp1 = fopen(filename, "wb");
-//   fwrite(p1, 512, 1, fp1);
-//   fclose(fp1);
    ++frame_count;
    if ( frame_count >= total_samples ){
+   sceMpegAvcDecodeStop(&avc->mpeg, 512, 0, &pic_num);
+   mp4ff_close(mp4_handle);
+   fclose(mp4_file);
+   sceMpegDelete(&avc->mpeg);
+   sceMpegFinish();
    sceDisplayWaitVblankStart();
     return 1;
     }
@@ -400,12 +349,10 @@ while(!(input.Buttons & PSP_CTRL_TRIANGLE)) {
    {
       float time_span = ((int)(curr_tick-last_tick)) / (float)tick_frequency;
       curr_ms = time_span / frame_count;
-      //frame_count = 0;
       sceRtcGetCurrentTick(&last_tick);
    }
    sceCtrlReadBufferPositive(&input, 1);
 }
-//   fclose(fp);
 
 wait:
    mp4ff_close(mp4_handle);
@@ -420,11 +367,11 @@ wait:
    sceCtrlReadBufferPositive(&input, 1);
    while(!(input.Buttons & PSP_CTRL_TRIANGLE))
    {
-      sceKernelDelayThread(10000);   // wait 10 milliseconds
+      sceKernelDelayThread(10000);
       sceCtrlReadBufferPositive(&input, 1);
    }
-   sceKernelStopModule(modid, 0, NULL, &status, NULL);
-   sceKernelUnloadModule(modid);
+   // sceKernelStopModule(modid, 0, NULL, &status, NULL);
+   // sceKernelUnloadModule(modid);
    return 1;
 }
 
