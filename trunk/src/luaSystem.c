@@ -10,6 +10,7 @@
 #include <psprtc.h>
 #include <pspLoadExec.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <pspgu.h>
 #include <pspsdk.h>
 #include <pspkernel.h>
@@ -26,6 +27,7 @@
 #include "libs/unzip/unzip.h"
 #include "libs/mp4/main.h"
 #include <stdio.h>
+#include "RemoteJoyLite.c"
 
 #define SIO_IOCTL_SET_BAUD_RATE 1
 #define LOADMODULE_ARGERROR "Argument error: System.loadModule(module, init) takes a module name and init method as string arguments."
@@ -51,6 +53,12 @@ LuaCreateUserdataHandlersFix(Zip, Zip*)
 LuaCreateUserdataHandlersFix(ZipFile, ZipFile*)
 
 void startISO(char* file,int driver);
+int launch_pops(char* path);
+u16 read_eeprom(u8 addr);
+u32 write_eeprom(u8 addr, u16 data);
+u32 getBaryon();
+u32 getPommel();
+int sceSysregGetTachyonVersion();
 
 typedef struct
 {
@@ -305,100 +313,96 @@ static int lua_rename(lua_State *L)
  ---------			USB Functions			---------
  *
  */
-
+ 
 SceUID modules[8];
 
 void StopUnloadModule(SceUID modID)
 {
 	int status = 0;
 	sceKernelStopModule(modID, 0, NULL, &status, NULL);
-	sceKernelUnloadModule(modID);
+	int id = sceKernelUnloadModule(modID);
 }
 
-static int LoadStartModule(char *path)
+int InitUsbStorage() 
 {
-	u32 loadResult;
-	u32 startResult;
-	int status;
+	u32 retVal = 0;
 
-	loadResult = sceKernelLoadModule(path, 0, NULL);
-	if (loadResult & 0x80000000)
-		return -1;
-	else
-		startResult =
-		sceKernelStartModule(loadResult, 0, NULL, &status, NULL);
+	//start necessary drivers
+	modules[0] = pspSdkLoadStartModule("flash0:/kd/chkreg.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[1] = pspSdkLoadStartModule("flash0:/kd/npdrm.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[2] = pspSdkLoadStartModule("flash0:/kd/semawm.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[3] = pspSdkLoadStartModule("flash0:/kd/usbstor.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[4] = pspSdkLoadStartModule("flash0:/kd/usbstormgr.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[5] = pspSdkLoadStartModule("flash0:/kd/usbstorms.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[6] = pspSdkLoadStartModule("flash0:/kd/usbstorboot.prx", PSP_MEMORY_PARTITION_KERNEL);
+	modules[7] = pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL);
 
-	if (loadResult != startResult)
-		return -2;
+	//setup USB drivers
+	retVal = sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
+	if (retVal != 0)
+	return -6;
+
+	retVal = sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
+	if (retVal != 0)
+	return -7;
+
+	retVal = sceUsbstorBootSetCapacity(0x800000);
+	if (retVal != 0)
+	return -8;
 
 	return 0;
 }
 
-static int lua_loadModule(lua_State *L)
+int StartUsbStorage() 
 {
-	const char *name = luaL_checkstring(L, 1);
-	const char *init = luaL_checkstring(L, 2);
+	return sceUsbActivate(0x1c8);
+}
 
-	SceUID uid = psploadlib( name, NULL );
-	if ( uid >= 0 ) {
-		lua_CFunction f = (lua_CFunction) *(findFunction( uid, name, init ));
-		if (f != NULL)
-		{
-			lua_pushlightuserdata(L,(void*)uid);
-			lua_pushcclosure(L,f,1);
-			return 1;
-		}
-	}
+int StopUsbStorage() 
+{
+	int retVal = sceUsbDeactivate(0x1c8);
+	sceIoDevctl("fatms0:", 0x0240D81E, NULL, 0, NULL, 0 ); //Avoid corrupted files
+	
+	return retVal;
+}
 
-	lua_pushnil(L);
-	lua_pushstring(L, LOADMODULE_ARGERROR );
-	lua_pushstring(L, (uid >= 0) ? "init" : "open");
-
-	return 3;
+int DeinitUsbStorage() 
+{
+	int i;
+	unsigned long state = sceUsbGetState();
+	if (state & PSP_USB_ACTIVATED)
+	StopUsbStorage();
+	sceUsbStop(PSP_USBSTOR_DRIVERNAME, 0, 0);
+	sceUsbStop(PSP_USBBUS_DRIVERNAME, 0, 0);
+	
+	for (i=7; i>=0; i--)
+	if (modules[i] >= 0)
+	StopUnloadModule(modules[i]);
+	
+return 0;
 }
 
 static int lua_usbActivate(lua_State *L)
 {
-	if (lua_gettop(L) != 0) return luaL_error(L, "wrong number of arguments");
-	if (usbActivated) return 0;
-
-	static int modulesLoaded = 0;
-	if (!modulesLoaded) {
-		//start necessary drivers
-		LoadStartModule("flash0:/km/semawm.prx");
-		LoadStartModule("flash0:/km/usbstor.prx");
-		LoadStartModule("flash0:/km/usbstormgr.prx");
-		LoadStartModule("flash0:/km/usbstorms.prx");
-		LoadStartModule("flash0:/km/usbstorboot.prx");
-
-		//setup USB drivers
-		int retVal = sceUsbStart(PSP_USBBUS_DRIVERNAME, 0, 0);
-		if (retVal != 0) {
-			printf("Error starting USB Bus driver (0x%08X)\n", retVal);
-		}
-		retVal = sceUsbStart(PSP_USBSTOR_DRIVERNAME, 0, 0);
-		if (retVal != 0) {
-			printf("Error starting USB Mass Storage driver (0x%08X)\n", retVal);
-		}
-		retVal = sceUsbstorBootSetCapacity(0x800000);
-		if (retVal != 0) {
-			printf("Error setting capacity with USB Mass Storage driver (0x%08X)\n", retVal);
-		}
-		retVal = 0;
-		modulesLoaded = 1;
+	if (lua_gettop(L) != 0) 
+	{
+		return luaL_error(L, "System.usbDiskModeActivate() takes no arguments");
 	}
-	sceUsbActivate(0x1c8);
-	usbActivated = 1;
+	InitUsbStorage();
+	StartUsbStorage();
+	
 	return 0;
 }
 
 static int lua_usbDeactivate(lua_State *L)
 {
-	if (lua_gettop(L) != 0) return luaL_error(L, "wrong number of arguments");
-	if (!usbActivated) return 0;
-
-	sceUsbDeactivate( 0 );  // what value here?
-	usbActivated = 0;
+	if (lua_gettop(L) != 0)
+	{
+		return luaL_error(L, "System.usbDiskModeDeactivate() takes no arguments");
+	}
+	StopUsbStorage();
+	DeinitUsbStorage();
+	
 	return 0;
 }
 
@@ -519,39 +523,6 @@ static int lua_getFreeMemory(lua_State *L)
 	}
 	lua_pushnumber(L, result * 1024 * 1024);
 	return 1;
-}
-
-/*
- *
- ---------			GU Functions			---------
- *
- */
-
- //Start the GU
-static int lua_StartGu(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if (argc != 0)
-	{
-		return luaL_error(L, "System.draw() takes no arguments");
-	}
-
-	guStart();
-	return 0;
-}
-
-//End the gu and sync
-static int lua_EndGu(lua_State *L)
-{
-	int argc = lua_gettop(L);
-	if (argc != 0)
-	{
-		return luaL_error(L, "System.endDraw() takes no arguments");
-	}
-
-	sceGuTexMode(GU_PSM_8888,0,0,GU_TRUE);
-	guEnd();
-	return 0;
 }
 
 /*
@@ -717,7 +688,8 @@ static int lua_SCEShowMessageDialog(lua_State *L)
 		}
 		else clearScreen(0xff554433);
 
-		guEnd();
+		sceGuFinish();
+		sceGuSync(0, 0);
 
 		draw = dialog_update();
 
@@ -765,7 +737,8 @@ static int lua_SCEOsk(lua_State *L)
 		else
 			clearScreen(0xff554433);
 
-		guEnd();
+		sceGuFinish();
+		sceGuSync(0, 0);
 
 		draw = osk_update();
 
@@ -1151,17 +1124,6 @@ static int lua_standby(lua_State *L)
 	return	0;
 }
 
-// PRX Load Function (Kernel Mode)
-static int lua_startPRX(lua_State *L)
-{
-	const char *path = luaL_checkstring(L, 1);
-	if(!path) return luaL_error(L, "System.copyFile takes a file name as a string argument.");
-	SceUID modid;
-	modid = kuKernelLoadModule(path, 0, NULL);
-	sceKernelStartModule(modid, 0, NULL, NULL, NULL);
-	return 1;
-}
-
 //Get Nickname,PSSID,Language & MAC Address Functions
 static int lua_nickname(lua_State *L)
 {
@@ -1436,13 +1398,13 @@ static int lua_getBus(lua_State *L)
 		
 	return 1;
 }
+
 // ISO/PSX Loader function
 static int lua_startISO(lua_State *L)
 {
-pspSdkLoadStartModule("ISOLoader.prx", PSP_MEMORY_PARTITION_KERNEL); 
 int argc = lua_gettop(L);
 if(argc != 2)
-        return luaL_error(L, "Argument error: System.startISO(filename,driver) takes two arguments.");
+		return luaL_error(L, "Argument error: System.startISO(filename,driver) takes two arguments.");
 const char *file = luaL_checkstring(L, 1);
 int driver = luaL_checkint(L, 2);
 startISO(file,driver);
@@ -1450,16 +1412,289 @@ return 0;
 }
 static int lua_startPSX(lua_State *L)
 {
-pspSdkLoadStartModule("ISOLoader.prx", PSP_MEMORY_PARTITION_KERNEL); 
 int argc = lua_gettop(L);
 if(argc != 1)
-        return luaL_error(L, "Argument error: System.startISO(filename) takes one argument.");
+		return luaL_error(L, "Argument error: System.startPSX(filename) takes one argument.");
 const char *file = luaL_checkstring(L, 1);
 launch_pops(file);
 return 0;
 }
 
-// 
+// RemoteJoyLite support functions
+static int lua_startRemote(lua_State *L)
+{
+int argc = lua_gettop(L);
+if(argc != 0)
+		return luaL_error(L, "Argument error: RemoteJoy.start() takes no argument.");
+SceUID remote;
+int status;
+FILE * pFile;
+pFile = fopen("ms0:/RemoteJoyLite.prx","wb");
+fwrite (RemoteJoyLite , 1 , size_RemoteJoyLite , pFile );
+fclose (pFile);
+remote = kuKernelLoadModule("ms0:/RemoteJoyLite.prx", 0, NULL);
+if(remote >= 0) {
+remote = sceKernelStartModule(remote, 0, 0, &status, NULL);
+}
+sceIoRemove("ms0:/RemoteJoyLite.prx");
+char stringa[256];
+sprintf(stringa,"%i",remote);
+lua_pushstring(L, stringa);
+return 1;
+}
+
+// PRX support functions
+static int lua_startPRX(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 1) return luaL_error(L, "Argument error: System.loadPRX(filename) takes one argument.");
+const char *file = luaL_checkstring(L, 1);
+SceUID remote;
+int status;
+remote = pspSdkLoadStartModule(file, PSP_MEMORY_PARTITION_KERNEL);
+lua_pushnumber(L, remote);
+return 1;
+}
+
+// Extra Functions
+static int lua_wait(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 1) return luaL_error(L, "Argument error: System.wait(milliseconds) takes one argument.");
+int milliseconds = luaL_checkint(L, 1);
+sceKernelDelayThread(milliseconds);
+return 1;
+}
+
+// Battery EEPROM Functions
+static int lua_receiveEEPROM(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: Battery.getSerial() takes no argument.");
+u16 hiValue;  
+u16 lowValue;  
+u32 serial;  
+hiValue = read_eeprom(0x07);  
+lowValue = read_eeprom(0x09);  
+serial = (hiValue << 16) | lowValue;
+char stringa[256];
+sprintf(stringa, "%08x", serial);
+int i;
+for (i = 0; stringa[i]; i++){
+  stringa[i] = toupper(stringa[i]);
+}
+char suffix[10] = "0x";
+strcat(suffix,stringa);
+lua_pushstring(L,suffix);
+return 1;
+}
+static int lua_BatTeory(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: Battery.getTeoryCapacity() takes no argument.");
+u16 capacity;
+capacity = read_eeprom(0x00);  
+lua_pushnumber(L,capacity);
+return 1;
+}
+static int lua_BatReal(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: Battery.getRealCapacity() takes no argument.");
+u16 capacity;
+capacity = read_eeprom(0x30);  
+lua_pushnumber(L,capacity);
+return 1;
+}
+static int lua_BatCharge(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: Battery.getChargeCount() takes no argument.");
+u16 capacity;
+capacity = read_eeprom(0x11);  
+lua_pushnumber(L,capacity);
+return 1;
+}
+static int lua_writeEEPROM(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 2) return luaL_error(L, "Argument error: Battery.writeSerial(base,finish) takes two arguments.");
+u16 hi = luaL_checkint(L, 1);
+u16 lo = luaL_checkint(L, 2);
+write_eeprom(0x09, lo);
+write_eeprom(0x07, hi);
+return 1;
+}
+static int lua_pandorize(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: Battery.pandorize() takes no argument.");
+write_eeprom(0x07, 0xFFFF);
+write_eeprom(0x09, 0xFFFF);
+return 1;
+}
+static int lua_normalize(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: Battery.normalize() takes no argument.");
+write_eeprom(0x07, 0x90CA);
+write_eeprom(0x09, 0x0815);
+return 1;
+}
+
+// MoBo Functions
+static int lua_baryon(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: System.getBaryon() takes no argument.");
+u32 baryon = getBaryon();
+char stringa3[256];
+sprintf(stringa3, "%08x", baryon);
+int i;
+for (i = 0; stringa3[i]; i++){
+  stringa3[i] = toupper(stringa3[i]);
+}
+char suffix[10] = "0x";
+strcat(suffix,stringa3);
+lua_pushstring(L,suffix);
+return 1;
+}
+static int lua_pommel(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: System.getPommel() takes no argument.");
+u32 pommel = getPommel();
+char stringa[256];
+sprintf(stringa, "0x%08x", pommel);
+lua_pushstring(L,stringa);
+return 1;
+}
+static int lua_tachyon(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: System.getTachyon() takes no argument.");
+u32 tachyon = sceSysregGetTachyonVersion();
+char stringa2[256];
+sprintf(stringa2, "0x%08x", tachyon);
+lua_pushstring(L,stringa2);
+return 1;
+}
+static int lua_mobo(lua_State*L)
+{
+int argc = lua_gettop(L);
+if (argc != 0) return luaL_error(L, "Argument error: System.getMotherboard() takes no argument.");
+u32 tachyon = sceSysregGetTachyonVersion();
+u32 baryon = getBaryon();
+u32 pommel = getPommel();
+char stringaz[256];
+sprintf(stringaz, "%08x%08x%08x", tachyon, baryon, pommel);
+char stringaz2[256];
+sprintf(stringaz2, "%08x%08x", tachyon, baryon);
+lua_pushstring(L,"Unknown");
+// PSP 1000
+if (strstr(stringaz2,"0014000000030600")){
+lua_pushstring(L,"TA-079 v1 (1G)");
+return 1;
+}
+if (strstr(stringaz2,"0020000000030600")){
+lua_pushstring(L,"TA-079 v2 (1G)");
+return 1;
+}
+if (strstr(stringaz2,"0020000000040600")){
+lua_pushstring(L,"TA-079 v3 (1G)");
+return 1;
+}
+if (strstr(stringaz2,"0030000000040600")){
+lua_pushstring(L,"TA-081 (1G)");
+return 1;
+}
+if (strstr(stringaz2,"0040000000114000")){
+lua_pushstring(L,"TA-082 (1G)");
+return 1;
+}
+if (strstr(stringaz2,"0040000000121000")){
+lua_pushstring(L,"TA-086 (1G)");
+return 1;
+}
+// PSP 2000
+if (strstr(stringaz2,"005000000022b200")){
+lua_pushstring(L,"TA-085 v1 (2G)");
+return 1;
+}
+if (strstr(stringaz2,"0050000000234000")){
+lua_pushstring(L,"TA-085 v2 (2G)");
+return 1;
+}
+if (strstr(stringaz,"005000000024300000000123")){
+lua_pushstring(L,"TA-088 v1/v2 (2G)");
+return 1;
+}
+if (strstr(stringaz2,"0060000000243000")){
+lua_pushstring(L,"TA-088 v3 (2G)");
+return 1;
+}
+if (strstr(stringaz,"005000000024300000000132")){
+lua_pushstring(L,"TA-090 v1 (2G)");
+return 1;
+}
+// PSP 3000
+if (strstr(stringaz2,"0060000000263100")){
+lua_pushstring(L,"TA-090 v2 (3G)");
+return 1;
+}
+if (strstr(stringaz2,"0060000000285000")){
+lua_pushstring(L,"TA-092 (3G)");
+return 1;
+}
+if (strstr(stringaz2,"00810000002c4000")){
+lua_pushstring(L,"TA-093 (4G)");
+return 1;
+}
+if (strstr(stringaz2,"00810000002e4000")){
+lua_pushstring(L,"N/A (6G)");
+return 1;
+}
+if (strstr(stringaz2,"0072000000304000")){
+if (kuKernelGetModel() == 3){
+lua_pushstring(L,"TA-091 (5G)");
+}else{
+lua_pushstring(L,"TA-095 (9G)");
+}
+return 1;
+}
+// PSP N1000
+if (strstr(stringaz2,"00800000002a0000")){
+lua_pushstring(L,"TA-094 (5G)");
+return 1;
+}
+return 1;
+}
+
+// Other functions
+static int lua_cfwver(lua_State *L)
+{
+    if (lua_gettop(L) != 0) return luaL_error(L, "no arguments expected.");
+	int ver = sceKernelDevkitVersion();
+	char *aStr;
+	char buffer[16];
+	sprintf(buffer,"%x",ver);
+	buffer[1]='.'; 	buffer[3]= buffer[4]; 	buffer[4]=0;
+	aStr =buffer;
+	lua_pushstring(L, aStr);
+    return 1;
+}
+
+//Register our Battery Functions
+static const luaL_reg Battery_functions[] = {
+  {"getTheoryCapacity",				lua_BatTeory},
+  {"getRealCapacity",				lua_BatReal},
+  {"getSerial",						lua_receiveEEPROM},
+  {"getChargeCount",				lua_BatCharge},
+  {"writeSerial",					lua_writeEEPROM},
+  {"normalize",						lua_normalize},
+  {"pandorize",						lua_pandorize},
+  {0, 0}
+};
 //Register our Zip Functions
 static const luaL_reg Zip_functions[] = {
   {"open",							lua_ZipOpen},
@@ -1472,6 +1707,14 @@ static const luaL_reg Zip_functions[] = {
 };
 //Register our System Functions
 static const luaL_reg System_functions[] = {
+  {"getVersion",					lua_cfwver},
+  {"getMotherboard",				lua_mobo},
+  {"getTachyon",					lua_tachyon},
+  {"getBaryon",						lua_baryon},
+  {"getPommel",						lua_pommel},
+  {"loadRemoteJoy",					lua_startRemote},
+  {"wait",							lua_wait},
+  {"loadPRX",						lua_startPRX},
   {"startPSX",						lua_startPSX},
   {"startISO",						lua_startISO},
   {"getCpuSpeed",					lua_getBus},
@@ -1494,7 +1737,6 @@ static const luaL_reg System_functions[] = {
   {"copyFile",                		lua_copyFile},
   {"copyDir",                       lua_copyDir},
   {"doesDirExist",                	lua_checkExist},
-  {"loadlib",                		lua_loadModule},
   {"startUMDUpdate",                lua_startUMDUpdate},
   {"sioInit",                       lua_sioInit},
   {"sioRead",                       lua_sioRead},
@@ -1508,8 +1750,6 @@ static const luaL_reg System_functions[] = {
   {"launchUMD",						lua_startUMD},
   {"startUpdate",					lua_startUpdate},
   {"startPBP",						lua_startPBP},
-  {"draw", 						    lua_StartGu},
-  {"endDraw",                       lua_EndGu},
   {"setCpuSpeed", 					lua_setCpuSpeed},
   {"getFPS",						lua_showFPS},
   {"quit",                          lua_systemQuit},
@@ -1542,6 +1782,7 @@ static const luaL_reg System_functions[] = {
 void luaSystem_init(lua_State *L) {
 	luaL_openlib(L, "System", System_functions, 0);
 	luaL_openlib(L, "ZIP", Zip_functions, 0);
+	luaL_openlib(L, "Battery", Battery_functions, 0);
 
 #define PSP_UTILITY_CONSTANT(name)\
 	lua_pushstring(L, #name);\
@@ -1578,3 +1819,4 @@ void luaSystem_init(lua_State *L) {
 	PSP_UTILITY_CONSTANT(OSK_INPUTTYPE_KOREAN);
 	PSP_UTILITY_CONSTANT(OSK_INPUTTYPE_URL);
 }
+
