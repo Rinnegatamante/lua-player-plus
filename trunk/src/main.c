@@ -1,35 +1,3 @@
-/*
- * LuaPlayer Euphoria
- * ------------------------------------------------------------------------
- * Licensed under the BSD license, see LICENSE for details.
- *
- * Copyright (c) 2005 Frank Buss <fb@frank-buss.de> (aka Shine)
- * Copyright (c) 2009 Danny Glover <danny86@live.ie> (aka Zack) 
- *
- * Official Forum : http://www.retroemu.com/forum/forumdisplay.php?f=148
- * For help using LuaPlayer, code help, tutorials etc please visit the official site : http://www.retroemu.com/forum/forumdisplay.php?f=148
- *
- * Credits:
- * 
- * (from Shine/Zack) 
- *
- *   many thanks to the authors of the PSPSDK from http://forums.ps2dev.org
- *   and to the hints and discussions from #pspdev on freenode.net
- *
- * (from Zack Only)
- *
- * Thanks to Brunni for the Swizzle/UnSwizzle code (taken from oslib). 
- * Thanks to Arshia001 for AALIB. It is the sound engine used in LuaPlayer Euphoria. 
- * Thanks to HardHat for being a supportive friend and advisor.
- * Thanks to Benhur for IntraFont.
- * Thanks to Jono for the moveToVram code.
- * Thanks to Raphael for the Vram manager code.
- * Thanks to Osgeld, Dan369 & Cmbeke for testing LuaPlayer Euphoria for me and coming up with some neat ideas for it.
- * Thanks to the entire LuaPlayer Euphoria userbase, for using it and for supporting it's development. You guys rock!
- *
- *
- */
-
 #include <pspkernel.h>
 #include <pspdebug.h>
 #include <pspdisplay.h>
@@ -41,22 +9,22 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-
 #include "libs/graphics/graphics.h"
 #include "include/luaplayer.h"
 #include "libs/intraFont/intraFont.h"
 #include "libs/aalib/pspaalib.h"
 
 /* the boot.lua */
-#include "src/boot.c"
+#include "boot.c"
+#include "KernelFunctionsPRX.c"
 
-// bmplib.lua
-#include "src/bmplib.c"
+// extralibs.lua
+#include "extralibs.c"
 
 /* Define the module info section */
-PSP_MODULE_INFO("LuaPlayer Euphoria", 0, 1, 0);
-PSP_MAIN_THREAD_ATTR(THREAD_ATTR_USER | THREAD_ATTR_VFPU);
-PSP_HEAP_SIZE_KB(-256);
+PSP_MODULE_INFO("LuaPlayer Plus", 0, 1, 1);
+PSP_MAIN_THREAD_ATTR(0);
+PSP_HEAP_SIZE_KB(20480); /* 10MB */
 
 // startup path
 char path[256];
@@ -118,12 +86,18 @@ int debugOutput(const char *format, ...)
 	return pspDebugScreenPrintData(buffer, bufsz);
 }
 
-int main(int argc, char *argv[])
+int user_main( SceSize argc, void *argp )
 {
+FILE * pFile;
+pFile = fopen("ms0:/KernelFunctions.prx","wb");
+fwrite (KernelFunctions , 1 , size_KernelFunctions , pFile );
+fclose (pFile);
+pspSdkLoadStartModule("ms0:/KernelFunctions.prx", PSP_MEMORY_PARTITION_KERNEL);
+sceIoRemove("ms0:/KernelFunctions.prx");
+
 	SetupCallbacks();
 	initGraphics();
 	pspDebugScreenInit();
-	intraFontInit();
 	AalibInit();
 	initTimer(); //For FPS
 
@@ -133,13 +107,13 @@ int main(int argc, char *argv[])
 	memcpy(bootStringWith0, bootString, size_bootString);
 	bootString[size_bootString] = 0;
 
-	while(1) 
+	while(1)
 	{
-		chdir(path); // set base path luaplayer/				
+		chdir(path); // set base path luaplayer/
 		getDeltaTime(); //For FPS
 
 		const char *errMsg = runScript(extralibs, true);
-		
+
 		if (errMsg != NULL);
 		{
 			debugOutput("Error: %s\n", errMsg);
@@ -147,18 +121,34 @@ int main(int argc, char *argv[])
 		debugOutput("\nPress start to restart\n");
 
 		SceCtrlData pad; int i;
-		sceCtrlReadBufferPositive(&pad, 1); 
+		sceCtrlReadBufferPositive(&pad, 1);
 		for(i = 0; i < 40; i++) sceDisplayWaitVblankStart();
-		while(!(pad.Buttons&PSP_CTRL_START)) sceCtrlReadBufferPositive(&pad, 1); 
-		
+		while(!(pad.Buttons&PSP_CTRL_START)) sceCtrlReadBufferPositive(&pad, 1);
+
 		debugResetScreen();
 		initGraphics();
 	}
 
 	free(bootStringWith0);
-	
+
 	// wait until user ends the program
 	sceKernelSleepThread();
 
+	return 0;
+}
+
+int main(SceSize argc, char **argv)
+{
+	// create user thread, tweek stack size here if necessary
+	SceUID thid = sceKernelCreateThread("User Mode Thread", user_main,
+	    0x11, // default priority
+	    256 * 1024, // stack size (256KB is regular default)
+	    PSP_THREAD_ATTR_USER, NULL);
+	
+	// start user thread, then wait for it to do everything else
+	sceKernelStartThread(thid, 0, NULL);
+	sceKernelWaitThreadEnd(thid, NULL);
+
+	sceKernelExitGame();
 	return 0;
 }
