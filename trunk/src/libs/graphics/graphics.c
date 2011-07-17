@@ -16,13 +16,6 @@
 #define MAX(X, Y) ((X) > (Y) ? (X) : (Y))
 #define false 0
 #define true 1
-#define int_p_NULL NULL
-#define png_voidp_NULL NULL
-#define png_infopp_NULL NULL
-#define png_bytep_NULL NULL
-#define png_error_ptr_NULL NULL
-#define png_set_gray_1_2_4_to_8 png_set_expand_gray_1_2_4_to_8
-#define png_set_expand_gray_1_2_4_to_8(p) png_set_expand(p)
 
 typedef struct
 {
