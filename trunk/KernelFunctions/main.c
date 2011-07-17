@@ -104,11 +104,11 @@ int launch_pops(char *path)
         struct SceKernelLoadExecVSHParam param;
         int apitype, ret;
         const char *mode;
-        if (kuKernelGetModel() == 3){
+		if (kuKernelGetModel() == 3){
         apitype = 0x155;
-        }else{
-        apitype = 0x144;
-        }
+		}else{
+		apitype = 0x144;
+		}
         mode = "pops";
         memset(&param, 0, sizeof(param));
         param.size = sizeof(param);
@@ -120,58 +120,59 @@ int launch_pops(char *path)
 }
 
 u16 read_eeprom(u8 addr){ // reversed function by silverspring (more info: http://my.malloc.us/silverspring/2007/12/19/380-and-pandora/)
-    if(addr>0x7F)
-        return(0);
-    u8 param[0x60];
-    param[0x0C] = 0x74; // read battery eeprom command
-    param[0x0D] = 3;    // tx packet length
-    param[0x0E] = addr;    // tx data
-     u32 k1 = pspSdkSetK1(0);
-    int res = sceSysconCmdExec(param, 0);
-    pspSdkSetK1(k1);
-    if (res < 0)
-        return(res);
-    return((param[0x21]<<8) | param[0x20]);// rx data
+	if(addr>0x7F)
+		return(0);
+	u8 param[0x60];
+	param[0x0C] = 0x74; // read battery eeprom command
+	param[0x0D] = 3;	// tx packet length
+	param[0x0E] = addr;	// tx data
+ 	u32 k1 = pspSdkSetK1(0);
+	int res = sceSysconCmdExec(param, 0);
+	pspSdkSetK1(k1);
+	if (res < 0)
+		return(res);
+	return((param[0x21]<<8) | param[0x20]);// rx data
 }
 
 u32 write_eeprom(u8 addr, u16 data){ // reversed function by silverspring (more info: http://my.malloc.us/silverspring/2007/12/19/380-and-pandora/)
-    u32 k1 = pspSdkSetK1(0);
-    int res;
-    u8 param[0x60];
-    if (addr > 0x7F)
-        return(0x80000102);
-    param[0x0C] = 0x73; // write battery eeprom command
-    param[0x0D] = 5;    // tx packet length
-    param[0x0E] = addr;// tx data
-    param[0x0F] = data;
-    param[0x10] = data>>8;
-    res = sceSysconCmdExec(param, 0);
-    if (res < 0)
-        return(res);
-    pspSdkSetK1(k1);
-    return 0;
+	u32 k1 = pspSdkSetK1(0);
+	int res;
+	u8 param[0x60];
+	if (addr > 0x7F)
+		return(0x80000102);
+	param[0x0C] = 0x73; // write battery eeprom command
+	param[0x0D] = 5;	// tx packet length
+	param[0x0E] = addr;// tx data
+	param[0x0F] = data;
+	param[0x10] = data>>8;
+	res = sceSysconCmdExec(param, 0);
+	if (res < 0)
+		return(res);
+	pspSdkSetK1(k1);
+	return 0;
 }
 
 u32 getBaryon(){
-    u32 k1 = pspSdkSetK1(0);
-    u32 baryon;
-    sceSyscon_driver_7EC5A957(&baryon);
-    return(baryon);
-    pspSdkSetK1(k1);
+	u32 k1 = pspSdkSetK1(0);
+	u32 baryon;
+	sceSyscon_driver_7EC5A957(&baryon);
+	pspSdkSetK1(k1);
+	return(baryon);
 }
 
 u32 getPommel(){
-    u32 k1 = pspSdkSetK1(0);
-    u32 pommel;
-    sceSyscon_driver_E7E87741(&pommel);
-    return(pommel);
-    pspSdkSetK1(k1);
+	u32 k1 = pspSdkSetK1(0);
+	u32 pommel;
+	sceSyscon_driver_E7E87741(&pommel);
+	pspSdkSetK1(k1);
+	return(pommel);
 }
 
 int g_tachyon_ver = -1;            // 0x40
 
 int sceSysregGetTachyonVersion()
 {
+	u32 k1 = pspSdkSetK1(0);
     if (g_tachyon_ver != -1)
         return(g_tachyon_ver);
 
@@ -194,7 +195,7 @@ int sceSysregGetTachyonVersion()
     }
 
     sceKernelCpuResumeIntr(intr);
-
+	pspSdkSetK1(k1);
     return(g_tachyon_ver);
 }
 
