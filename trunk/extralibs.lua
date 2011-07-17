@@ -180,11 +180,13 @@ icon:close()
 if System.getFileSize(dir.."/DATA.PSP") <= 0 then
 System.removeFile(dir.."/DATA.PSP")
 end
+if (final-datapsar) > 0 then
 icon = io.open(dir.."/DATA.PSAR",'w')
 icon:write(eboot:read(final-datapsar))
 icon:close()
 if System.getFileSize(dir.."/DATA.PSAR") <= 0 then
 System.removeFile(dir.."/DATA.PSAR")
+end
 end
 eboot:close()
 end
