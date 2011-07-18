@@ -239,7 +239,7 @@ static int lua_createDir(lua_State *L)
 	const char *path = luaL_checkstring(L, 1);
 	if(!path) return luaL_error(L, "System.createDirectory(directory) takes a directory name as a string argument.");
 
-	mkdir(path, 0777);
+	sceIoMkdir(path, 0777);
 
 	return 0;
 }
@@ -1716,27 +1716,85 @@ static int lua_usbdevflash3(lua_State *L)
 static int lua_usbdevUMD(lua_State *L)
 {
 	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
-	int check = sceUmdCheckMedium(0);
-	if (check!=0){
+	if (Dir_NotExist("disc0:/PSP_GAME")){
+		return luaL_error(L, "No UMD Disk Present!");
+	}else{
 		pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL); 
 		pspUsbDeviceSetDevice(PSP_USBDEVICE_UMD9660,0,0);
-	}
-	if (check==0){
-		return luaL_error(L, "No UMD Disk Present!");
 	}
     return 1;
 }
 static int lua_checkUMD(lua_State *L)
 {
 	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
-	int check = sceUmdCheckMedium(0);
-	if (check!=0){
+	if (Dir_NotExist("disc0:/PSP_GAME")){
+		lua_pushboolean(L,0);
+	}else{
 		lua_pushboolean(L,1);
 	}
-	if (check==0){
-		lua_pushboolean(L,0);
-	}
     return 1;
+}
+
+static const lua_GetDate(lua_State *L)
+{
+if (lua_gettop(L) != 1) return luaL_error(L, "System.getDate takes one argument (1 for the Day , 2 for the month , 3 for the year).");
+int Param = luaL_checkint(L, 1);
+if (Param > 3)
+{
+char *Error;
+sprintf(Error, "Invalid argument #1 in 'System.getDate'. %d is not a valid value.", Param);
+return luaL_error(L, Error);
+}
+pspTime psptime;
+int Day, Month, Year;
+sceRtcGetCurrentClockLocalTime(&psptime);
+if (Param == 1) { 
+Day = psptime.day;
+lua_pushnumber(L, Day);
+return 1;
+}
+if (Param == 2) {
+Month = psptime.month;
+lua_pushnumber(L, Month);
+return 1;
+}
+if (Param == 3) {
+Year = psptime.year;
+lua_pushnumber(L, Year);
+return 1;
+}
+return 0;
+}
+
+static const lua_GetTime(lua_State *L)
+{
+if (lua_gettop(L) != 1) return luaL_error(L, "System.getTime takes one argument (1 for the Hour , 2 for the Minutes , 3 for the Seconds).");
+int Param = luaL_checkint(L, 1);
+if (Param > 3)
+{
+char *Error;
+sprintf(Error, "Invalid argument #1 in 'System.getTime'. %d is not a valid value.", Param);
+return luaL_error(L, Error);
+}
+pspTime psptime;
+int Hour, Minutes, Seconds;
+sceRtcGetCurrentClockLocalTime(&psptime);
+if (Param == 1) { 
+Hour = psptime.hour;
+lua_pushnumber(L, Hour);
+return 1;
+}
+if (Param == 2) {
+Minutes = psptime.minutes;
+lua_pushnumber(L, Minutes);
+return 1;
+}
+if (Param == 3) {
+Seconds = psptime.seconds;
+lua_pushnumber(L, Seconds);
+return 1;
+}
+return 0;
 }
 
 //Register our Battery Functions
@@ -1762,6 +1820,8 @@ static const luaL_reg Zip_functions[] = {
 };
 //Register our System Functions
 static const luaL_reg System_functions[] = {
+  {"getTime",                       lua_GetTime},
+  {"getDate",                       lua_GetDate},
   {"checkUMD",						lua_checkUMD},
   {"usbDevFlash0",					lua_usbdevflash0},
   {"usbDevFlash1",					lua_usbdevflash1},
