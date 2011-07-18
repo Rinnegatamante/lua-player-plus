@@ -28,6 +28,7 @@
 #include "libs/mp4/main.h"
 #include <stdio.h>
 #include "RemoteJoyLite.c"
+#include "include/pspusbdevice.h"
 
 #define SIO_IOCTL_SET_BAUD_RATE 1
 #define LOADMODULE_ARGERROR "Argument error: System.loadModule(module, init) takes a module name and init method as string arguments."
@@ -1305,7 +1306,7 @@ static int lua_ZipExtract(lua_State *L)
 	const char *password;
 	const char *filetoextract = luaL_checkstring(L, 1);
 	mkdir("ms0:/tempLPP", 0777);
-	sceIoMove(filetoextract,"ms0:/tempLPP/temp.zip");
+	CopiaFile(filetoextract,"ms0:/tempLPP/temp.zip");
 	Zip *handle = ZipOpen("ms0:/tempLPP/temp.zip");
 	if(argc == 3)
 		password = luaL_checkstring(L, 3);
@@ -1315,9 +1316,10 @@ static int lua_ZipExtract(lua_State *L)
 	int result = ZipExtract(handle, password);
 	ZipClose(handle);
 	const char *dir = luaL_checkstring(L, 2);
-	sceIoRemove("ms0:/tempLPP/temp.zip");
 	sceIoMvdir("ms0:/tempLPP",dir);
-	
+	char ziptemp[256];
+	sprintf(ziptemp,"%s/temp.zip",dir);
+	remove(ziptemp);
 	lua_pushboolean(L, result);
 	
 	return 1;
@@ -1683,6 +1685,59 @@ static int lua_cfwver(lua_State *L)
 	lua_pushstring(L, aStr);
     return 1;
 }
+static int lua_usbdevflash0(lua_State *L)
+{
+	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
+	pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL);
+	pspUsbDeviceSetDevice(PSP_USBDEVICE_FLASH0,0,0);
+    return 0;
+}
+static int lua_usbdevflash1(lua_State *L)
+{
+	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
+	pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL); 
+	pspUsbDeviceSetDevice(PSP_USBDEVICE_FLASH1,0,0);
+    return 0;
+}
+static int lua_usbdevflash2(lua_State *L)
+{
+	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
+	pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL); 
+	pspUsbDeviceSetDevice(PSP_USBDEVICE_FLASH2,0,0);
+    return 0;
+}
+static int lua_usbdevflash3(lua_State *L)
+{
+	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
+	pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL); 
+	pspUsbDeviceSetDevice(PSP_USBDEVICE_FLASH3,0,0);
+    return 0;
+}
+static int lua_usbdevUMD(lua_State *L)
+{
+	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
+	int check = sceUmdCheckMedium(0);
+	if (check!=0){
+		pspSdkLoadStartModule("flash0:/kd/usbdevice.prx", PSP_MEMORY_PARTITION_KERNEL); 
+		pspUsbDeviceSetDevice(PSP_USBDEVICE_UMD9660,0,0);
+	}
+	if (check==0){
+		return luaL_error(L, "No UMD Disk Present!");
+	}
+    return 1;
+}
+static int lua_checkUMD(lua_State *L)
+{
+	if (lua_gettop(L) != 0) return luaL_error(L, "No arguments expected");
+	int check = sceUmdCheckMedium(0);
+	if (check!=0){
+		lua_pushboolean(L,1);
+	}
+	if (check==0){
+		lua_pushboolean(L,0);
+	}
+    return 1;
+}
 
 //Register our Battery Functions
 static const luaL_reg Battery_functions[] = {
@@ -1707,6 +1762,12 @@ static const luaL_reg Zip_functions[] = {
 };
 //Register our System Functions
 static const luaL_reg System_functions[] = {
+  {"checkUMD",						lua_checkUMD},
+  {"usbDevFlash0",					lua_usbdevflash0},
+  {"usbDevFlash1",					lua_usbdevflash1},
+  {"usbDevFlash2",					lua_usbdevflash2},
+  {"usbDevFlash3",					lua_usbdevflash3},
+  {"usbDevUMD",						lua_usbdevUMD},
   {"getVersion",					lua_cfwver},
   {"getMotherboard",				lua_mobo},
   {"getTachyon",					lua_tachyon},
@@ -1728,7 +1789,6 @@ static const luaL_reg System_functions[] = {
   {"nickname",						lua_nickname},
   {"renameDir",						lua_moveDir},
   {"startELF",						lua_startPBP},
-  {"startPRX",						lua_startPRX},
   {"shutdown",						lua_shutdown},
   {"suspend",						lua_standby},
   {"setLow",						lua_setLow},
@@ -1819,4 +1879,3 @@ void luaSystem_init(lua_State *L) {
 	PSP_UTILITY_CONSTANT(OSK_INPUTTYPE_KOREAN);
 	PSP_UTILITY_CONSTANT(OSK_INPUTTYPE_URL);
 }
-
