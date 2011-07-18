@@ -1,7 +1,7 @@
 #ifndef PSP_ADHOC_H
 #define PSP_ADHOC_H
 
-/** @defgroup pgeAdhoc Adhoc Library
+/** @defgroup Adhoc Adhoc Library
  *  @{
  */
 
@@ -11,90 +11,89 @@
 #include <pspnet_adhocctl.h>
 #include <pspnet.h>
 
-#define PGE_ADHOC_EVENT_ERROR            0x0001
-#define PGE_ADHOC_EVENT_CONNECT            0x0002
-#define PGE_ADHOC_EVENT_DISCONNECT        0x0004
-#define PGE_ADHOC_EVENT_SCAN            0x0008
-#define PGE_ADHOC_EVENT_GAMEMODE        0x0010
-#define PGE_ADHOC_EVENT_CANCEL            0x0020
+#define _ADHOC_EVENT_ERROR			0x0001
+#define _ADHOC_EVENT_CONNECT			0x0002
+#define _ADHOC_EVENT_DISCONNECT		0x0004
+#define _ADHOC_EVENT_SCAN			0x0008
+#define _ADHOC_EVENT_GAMEMODE		0x0010
+#define _ADHOC_EVENT_CANCEL			0x0020
 
-#define PGE_ADHOC_MATCHING_EVENT_NONE            0
-#define PGE_ADHOC_MATCHING_EVENT_HELLO            1
-#define PGE_ADHOC_MATCHING_EVENT_REQUEST        2
-#define PGE_ADHOC_MATCHING_EVENT_LEAVE            3
-#define PGE_ADHOC_MATCHING_EVENT_DENY            4
-#define PGE_ADHOC_MATCHING_EVENT_CANCEL            5
-#define PGE_ADHOC_MATCHING_EVENT_ACCEPT            6
-#define PGE_ADHOC_MATCHING_EVENT_ESTABLISHED    7
-#define PGE_ADHOC_MATCHING_EVENT_TIMEOUT        8
-#define PGE_ADHOC_MATCHING_EVENT_ERROR            9
-#define PGE_ADHOC_MATCHING_EVENT_BYE            10
+#define _ADHOC_MATCHING_EVENT_NONE			0
+#define _ADHOC_MATCHING_EVENT_HELLO			1
+#define _ADHOC_MATCHING_EVENT_REQUEST		2
+#define _ADHOC_MATCHING_EVENT_LEAVE			3
+#define _ADHOC_MATCHING_EVENT_DENY			4
+#define _ADHOC_MATCHING_EVENT_CANCEL			5
+#define _ADHOC_MATCHING_EVENT_ACCEPT			6
+#define _ADHOC_MATCHING_EVENT_ESTABLISHED	7
+#define _ADHOC_MATCHING_EVENT_TIMEOUT		8
+#define _ADHOC_MATCHING_EVENT_ERROR			9
+#define _ADHOC_MATCHING_EVENT_BYE			10
 
-#define PGE_ADHOC_TYPE_NORMAL            0
-#define PGE_ADHOC_TYPE_GAMESHARING        2
+#define _ADHOC_TYPE_NORMAL			0
+#define _ADHOC_TYPE_GAMESHARING		2
 
-#define PGE_ADHOC_MATCHING_MODE_GAME    0
-#define PGE_ADHOC_MATCHING_MODE_PTP        1
+#define _ADHOC_MATCHING_MODE_GAME	0
+#define _ADHOC_MATCHING_MODE_PTP		1
 
-#define PGE_ADHOC_MATCHING_TYPE_HOST    0
-#define PGE_ADHOC_MATCHING_TYPE_CLIENT    1
+#define _ADHOC_MATCHING_TYPE_HOST	0
+#define _ADHOC_MATCHING_TYPE_CLIENT	1
 
 typedef struct
 {
-    char mac[18];
-    char nickname[128];
-    char hello[128];
-    int event;
-    
-} pgeAdhocPeerEvent;
+	char mac[18];
+	char nickname[128];
+	char hello[128];
+	int event;
+	
+} AdhocPeerEvent;
 
 // PROTOTYPES
 
-int pgeAdhocInit(int type);
+int AdhocInit(int type);
 
-int pgeAdhocShutdown(void);
+int AdhocShutdown(void);
 
-int pgeAdhocGameHost(const char *name);
+int AdhocGameHost(const char *name);
 
-int pgeAdhocConnect(const char *name);
+int AdhocConnect(const char *name);
 
-int pgeAdhocPeerExists(const char *mac);
+int AdhocPeerExists(const char *mac);
 
-int pgeAdhocMatchingInit(int mode, int type);
+int AdhocMatchingInit(int mode, int type);
 
-int pgeAdhocMatchingStart(const char *hello);
+int AdhocMatchingStart(const char *hello);
 
-int pgeAdhocMatchingAccept(const char *mac);
+int AdhocMatchingAccept(const char *mac);
 
-int pgeAdhocMatchingDecline(const char *mac);
+int AdhocMatchingDecline(const char *mac);
 
-int pgeAdhocMatchingShutdown(void);
+int AdhocMatchingShutdown(void);
 
-pgeAdhocPeerEvent* pgeAdhocMatchingGetEvents(void);
+AdhocPeerEvent* AdhocMatchingGetEvents(void);
 
-int pgeAdhocMatchingClearEvent(pgeAdhocPeerEvent *event);
+int AdhocMatchingClearEvent(AdhocPeerEvent *event);
 
-int pgeAdhocPtpHostStart(void);
+int AdhocPtpHostStart(void);
 
-int pgeAdhocPtpClientStart(const char *servermac);
+int AdhocPtpClientStart(const char *servermac);
 
-int pgeAdhocPtpReceive(void *data, int *length);
+int AdhocPtpReceive(void *data, int *length);
 
-int pgeAdhocPtpSend(void *data, int *length);
+int AdhocPtpSend(void *data, int *length);
 
-int pgeAdhocPtpCheckForData(void);
+int AdhocPtpCheckForData(void);
 
-int pgeAdhocPtpFlush(void);
+int AdhocPtpFlush(void);
 
-int pgeAdhocPtpHostShutdown(void);
+int AdhocPtpHostShutdown(void);
 
-int pgeAdhocPtpClientShutdown(void);
+int AdhocPtpClientShutdown(void);
 
-int pgeAdhocGetState(void);
+int AdhocGetState(void);
 
-int pgeAdhocGetError(void);
+int AdhocGetError(void);
 
 /** @} */
 
 #endif
-
