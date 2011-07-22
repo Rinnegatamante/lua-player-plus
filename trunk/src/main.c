@@ -24,7 +24,7 @@
 /* Define the module info section */
 PSP_MODULE_INFO("LuaPlayer Plus", 0, 1, 1);
 PSP_MAIN_THREAD_ATTR(0);
-PSP_HEAP_SIZE_KB(20480); /* 10MB */
+PSP_HEAP_SIZE_KB(-1024);
 
 // startup path
 char path[256];
