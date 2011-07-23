@@ -1,3 +1,62 @@
+font = {w = 8, h = 8}
+
+-- Patched print function
+local oldprint = screen.print
+screen.print = function(image, x, y, text, color) 
+    local function tremas(x, y, color)
+        screen:pixel(x + 1, y, color)
+        screen:pixel(x + 3, y, color)
+    end
+    local specialChar = {{"é", "e", "'"}, {"è", "e", "`"}, {"ê", "e", "^"}, {"ë", "e", "¨"}, {"à", "a", "`"}, {"â", "a", "^"}, {"ä", "a", "¨"}, {"î", "i", "^"}, {"ï", "i", "¨"}, {"ô", "o", "^"}, {"ö", "o", "¨"}, {"ù", "u", "`"}, {"û", "u", "^"}, {"ü", "u", "¨"}}
+    for i, c in ipairs(specialChar) do 
+        local s = text:find(c[1])	
+        while s do
+            if c[3] == "¨" then
+                tremas(x + (s * font.w) - font.w, y, color)
+            else
+                oldprint(image, x + (s * font.w) - font.w, y, c[3], color)
+            end
+            text = text:sub(0, s - 1)  .. c[2] .. text:sub(s + 1)
+            s = text:find(c[1])
+        end
+    end
+    oldprint(image, x, y, text, color)
+end
+
+--Underline
+function screen.printUnderline(image, x, y, text, text_color, line_color)
+    image:print(x, y, text, text_color)
+    image:drawLine(x - 2, y + font.h + 1, x + font.w * string.len(text), y + font.h + 1, line_color)
+end
+
+--Write vertically
+function screen.printVertical(image,x, y, text, distance, color)
+    i, taille = 1, string.len(text)
+    for i = 0, taille do
+        i = i + 1
+        image:print(x, y + i * distance, string.sub(text, i, i), color)
+    end
+end
+
+-- Gradient text
+function screen.printGradient(image,x, y, text, color1, color2)
+   local t = {}
+   local first_color, second_color = color1:colors(), color2:colors()
+   local diffR, diffG, diffB = second_color.r -first_color.r, second_color.g - first_color.g, second_color.b - first_color.b
+   local stepR, stepG, stepB = diffR / #text, diffG / #text, diffB / #text
+   for i = 1, #text do
+      table.insert(t, string.sub(text, i, i))
+   end
+   for i, v in ipairs(t) do
+      image:print((x + i * 8) - 8, y, v, Color.new(i * stepR + first_color.r, i * stepG + first_color.g, i * stepB + first_color.b))
+   end
+end
+
+-- Center
+function screen.printCenter(image, y, text, color)
+    local x0 = 240 - (string.len(text) * font.w) / 2
+    image:print(x0, y0, text, color)
+end
 -- BMPLib
 function b(byte_number, byte_length)
 if byte_length == 1 then
