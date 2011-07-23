@@ -1,6 +1,6 @@
-TARGET = lua
+TARGET = LuaPlayerPlus
 
-LUA_OBJS = 			src/luaPlayer.o src/utility.o src/include/mathfix.o src/luaMath.o \
+LUA_OBJS = 			src/luaPlayer.o src/utility.o src/luaMath.o \
 					src/luaControls.o src/luaGraphics.o src/luaSound.o \
 					src/lua3d.o src/luaTimer.o src/luaSystem.o src/luaWlan.o \
 					
@@ -48,7 +48,7 @@ LIBS =  -lUnrar -lstdc++ -lfreetype -llua -lpsprtc -lpng -ljpeg -lpspgum -lpspgu
 
 BUILD_PRX = 1
 
-PSP_FW_VERSION = 401
+PSP_FW_VERSION = 371
 
 PSP_LARGE_MEMORY = 1
 
