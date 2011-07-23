@@ -4,7 +4,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
-#include "include/mathfix.h"
+#include <math.h>
 
 static int lua_MathAtan(lua_State *L)
 {
@@ -12,11 +12,8 @@ static int lua_MathAtan(lua_State *L)
 	
 	if(argc != 1)
 		return luaL_error(L, "Argument error: math.atan(value) takes one argument.");
-	
 	float x = luaL_checknumber(L, 1);
-	
-	lua_pushnumber(L, MathAtan(x));
-	
+	lua_pushnumber(L, atan(x));
 	return 1;
 }
 
@@ -28,11 +25,8 @@ static int lua_MathAtan2(lua_State *L)
 		return luaL_error(L, "Argument error: math.atan2(y, x) takes two arguments.");
 	
 	float y = luaL_checknumber(L, 1);
-	
 	float x = luaL_checknumber(L, 2);
-	
-	lua_pushnumber(L, MathAtan2(y, x));
-	
+	lua_pushnumber(L, atan2(y, x));
 	return 1;
 }
 
@@ -45,7 +39,7 @@ static int lua_MathCos(lua_State *L)
 	
 	float radians = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathCos(radians));
+	lua_pushnumber(L, cos(radians));
 	
 	return 1;
 }
@@ -59,7 +53,7 @@ static int lua_MathSin(lua_State *L)
 	
 	float radians = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathSin(radians));
+	lua_pushnumber(L, sin(radians));
 	
 	return 1;
 }
@@ -73,7 +67,7 @@ static int lua_MathAcos(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathAcos(x));
+	lua_pushnumber(L, acos(x));
 	
 	return 1;
 }
@@ -87,7 +81,7 @@ static int lua_MathAsin(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathAsin(x));
+	lua_pushnumber(L, asin(x));
 	
 	return 1;
 }
@@ -101,7 +95,7 @@ static int lua_MathCosh(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathCosh(x));
+	lua_pushnumber(L, cosh(x));
 	
 	return 1;
 }
@@ -115,7 +109,7 @@ static int lua_MathExp(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathExp(x));
+	lua_pushnumber(L, exp(x));
 	
 	return 1;
 }
@@ -131,7 +125,7 @@ static int lua_MathFmax(lua_State *L)
 	
 	float y = luaL_checknumber(L, 2);
 	
-	lua_pushnumber(L, MathFmax(x, y));
+	lua_pushnumber(L, fmax(x, y));
 	
 	return 1;
 }
@@ -147,7 +141,7 @@ static int lua_MathFmin(lua_State *L)
 	
 	float y = luaL_checknumber(L, 2);
 	
-	lua_pushnumber(L, MathFmin(x, y));
+	lua_pushnumber(L, fmin(x, y));
 	
 	return 1;
 }
@@ -163,7 +157,7 @@ static int lua_MathFmod(lua_State *L)
 	
 	float y = luaL_checknumber(L, 2);
 	
-	lua_pushnumber(L, MathFmod(x, y));
+	lua_pushnumber(L, fmod(x, y));
 	
 	return 1;
 }
@@ -177,7 +171,7 @@ static int lua_MathLog(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathLog(x));
+	lua_pushnumber(L, log(x));
 	
 	return 1;
 }
@@ -193,7 +187,7 @@ static int lua_MathPow(lua_State *L)
 	
 	float y = luaL_checknumber(L, 2);
 	
-	lua_pushnumber(L, MathPow(x, y));
+	lua_pushnumber(L, pow(x, y));
 	
 	return 1;
 }
@@ -206,8 +200,6 @@ static int lua_MathSrand(lua_State *L)
 		return luaL_error(L, "Argument error: math.srand(seed) takes one argument.");
 	
 	unsigned int seed = luaL_checkint(L, 1);
-	
-	MathSrand(seed);
 	
 	return 0;
 }
@@ -223,8 +215,6 @@ static int lua_MathRandFloat(lua_State *L)
 	
 	float max = luaL_checknumber(L, 2);
 	
-	lua_pushnumber(L, MathRandFloat(min, max));
-	
 	return 1;
 }
 
@@ -237,15 +227,15 @@ static int lua_MathSinCos(lua_State *L)
 	
 	float radians = luaL_checknumber(L, 1);
 	
-	float sin = 0.0f;
+	float Sin = 0.0f;
 	
-	float cos = 0.0f;
+	float Cos = 0.0f;
 	
-	MathSincos(radians, &sin, &cos);
+	sincos(radians, &Sin, &Cos);
 	
-	lua_pushnumber(L, sin);
+	lua_pushnumber(L, Sin);
 	
-	lua_pushnumber(L, cos);
+	lua_pushnumber(L, Cos);
 	
 	return 2;
 }
@@ -259,7 +249,7 @@ static int lua_MathSinh(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathSinh(x));
+	lua_pushnumber(L, sinh(x));
 	
 	return 1;
 }
@@ -273,7 +263,7 @@ static int lua_MathTan(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathTan(x));
+	lua_pushnumber(L, tan(x));
 	
 	return 1;
 }
@@ -287,7 +277,7 @@ static int lua_MathTanh(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathTanh(x));
+	lua_pushnumber(L, tanh(x));
 	
 	return 1;
 }
@@ -301,7 +291,7 @@ static int lua_MathSqrt(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathSqrt(x));
+	lua_pushnumber(L, sqrt(x));
 	
 	return 1;
 }
@@ -317,8 +307,6 @@ static int lua_MathRandInt(lua_State *L)
 	
 	float max = luaL_checknumber(L, 2);
 	
-	lua_pushinteger(L, MathRandInt(min, max));
-	
 	return 1;
 }
 
@@ -331,7 +319,7 @@ static int lua_MathAbs(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathAbs(x));
+	lua_pushnumber(L, abs(x));
 	
 	return 1;
 }
@@ -345,7 +333,7 @@ static int lua_MathCeil(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathCeil(x));
+	lua_pushnumber(L, ceil(x));
 	
 	return 1;
 }
@@ -359,7 +347,7 @@ static int lua_MathFloor(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathFloor(x));
+	lua_pushnumber(L, floor(x));
 	
 	return 1;
 }
@@ -373,7 +361,7 @@ static int lua_MathLog2(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathLog2(x));
+	lua_pushnumber(L, log2(x));
 	
 	return 1;
 }
@@ -387,7 +375,7 @@ static int lua_MathLog10(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathLog10(x));
+	lua_pushnumber(L, log10(x));
 	
 	return 1;
 }
@@ -401,8 +389,6 @@ static int lua_MathPow2(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathPow2(x));
-	
 	return 1;
 }
 
@@ -415,7 +401,7 @@ static int lua_MathRound(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathRound(x));
+	lua_pushnumber(L, round(x));
 	
 	return 1;
 }
@@ -429,7 +415,7 @@ static int lua_MathTrunc(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathTrunc(x));
+	lua_pushnumber(L, trunc(x));
 	
 	return 1;
 }
@@ -443,8 +429,6 @@ static int lua_MathInvSqrt(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathInvSqrt(x));
-	
 	return 1;
 }
 
@@ -457,8 +441,6 @@ static int lua_MathDegToRad(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, MathDegToRad(x));
-	
 	return 1;
 }
 
@@ -470,8 +452,6 @@ static int lua_MathRadToDeg(lua_State *L)
 		return luaL_error(L, "Argument error: math.deg(x) takes one argument.");
 	
 	float x = luaL_checknumber(L, 1);
-	
-	lua_pushnumber(L, MathRadToDeg(x));
 	
 	return 1;
 }
