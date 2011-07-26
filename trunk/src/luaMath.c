@@ -5,6 +5,7 @@
 #include "lauxlib.h"
 
 #include <math.h>
+#include <pspmath.h>
 
 static int lua_MathAtan(lua_State *L)
 {
@@ -200,8 +201,9 @@ static int lua_MathSrand(lua_State *L)
 		return luaL_error(L, "Argument error: math.srand(seed) takes one argument.");
 	
 	unsigned int seed = luaL_checkint(L, 1);
-	
-	return 0;
+	vfpu_srand(seed);
+	lua_pushnumber(L, seed);
+	return 1;
 }
 
 static int lua_MathRandFloat(lua_State *L)
@@ -214,7 +216,7 @@ static int lua_MathRandFloat(lua_State *L)
 	float min = luaL_checknumber(L, 1);
 	
 	float max = luaL_checknumber(L, 2);
-	
+	lua_pushnumber(L, vfpu_randf(min, max));
 	return 1;
 }
 
@@ -307,6 +309,7 @@ static int lua_MathRandInt(lua_State *L)
 	
 	float max = luaL_checknumber(L, 2);
 	
+	lua_pushnumber(L, vfpu_rand_8888(min, max));
 	return 1;
 }
 
@@ -319,7 +322,7 @@ static int lua_MathAbs(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
-	lua_pushnumber(L, abs(x));
+	lua_pushnumber(L, fabs(x));
 	
 	return 1;
 }
@@ -389,6 +392,7 @@ static int lua_MathPow2(lua_State *L)
 	
 	float x = luaL_checknumber(L, 1);
 	
+	lua_pushnumber(L, pow(x, 2));
 	return 1;
 }
 
@@ -420,6 +424,7 @@ static int lua_MathTrunc(lua_State *L)
 	return 1;
 }
 
+
 static int lua_MathInvSqrt(lua_State *L)
 {
 	int argc = lua_gettop(L);
@@ -428,7 +433,7 @@ static int lua_MathInvSqrt(lua_State *L)
 		return luaL_error(L, "Argument error: math.invsqrt(x) takes one argument.");
 	
 	float x = luaL_checknumber(L, 1);
-	
+	lua_pushnumber(L, sqrt(x));
 	return 1;
 }
 
@@ -452,12 +457,24 @@ static int lua_MathRadToDeg(lua_State *L)
 		return luaL_error(L, "Argument error: math.deg(x) takes one argument.");
 	
 	float x = luaL_checknumber(L, 1);
-	
+	float result = x * 57.2957805f;
+	lua_pushnumber(L, result);
 	return 1;
+}
+
+static int lua_MathPi(lua_State *L)
+{
+int argc = lua_gettop(L);
+if (argc != 0)
+return luaL_error(L, "Argument error: math.pi() takes no argument.");
+float pi = 3.14159265358979323846;
+lua_pushnumber(L, pi);
+return 1;
 }
 
 static const luaL_reg lua_Math_functions[] =
 {
+    {"pi",          lua_MathPi},
 	{"atan",		lua_MathAtan},
 	{"atan2",		lua_MathAtan2},
 	{"cos",			lua_MathCos},
