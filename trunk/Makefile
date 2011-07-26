@@ -14,7 +14,7 @@ AUDIO_OBJS = 		src/libs/sounds/id3.o src/libs/sounds/player.o src/libs/sounds/aa
 					src/libs/aalib/pspaalibat3.o src/libs/aalib/pspaalibeffects.o
 
 GRAPHICS_OBJS = 	src/libs/vram/vram.o \
-					src/libs/graphics/graphics.o src/libs/graphics/framebuffer.o
+					src/libs/graphics/graphics.o src/libs/graphics/framebuffer.o 
 
 INTRAFONT_OBJS = 	
 
@@ -38,8 +38,8 @@ LIBDIR =
 
 LDFLAGS =
 
-LIBS =  -lUnrar -lstdc++ -lfreetype -llua -lpsprtc -lpng -ljpeg -lpspgum -lpspgum_vfpu -lpspvfpu -lpspgu -lz -lpspaudio -lpspmp3 -lmad -lpsppower -lvorbisidec -lpspatrac3 -lm \
-		-lpspusb -lpspusbstor -lpsppower -lpsphttp -lpspssl -lpspwlan -lpspnet_adhocmatching -lpspnet_adhoc -lpspnet_adhocctl -lpsputility -lcurl \
+LIBS =  -lpspmath -lpsputility -lUnrar -lstdc++ -lfreetype -llua -lpsprtc -lpng -ljpeg -lpspgum -lpspgum_vfpu -lpspvfpu -lpspgu -lz -lpspaudio -lpspmp3 -lmad -lpsppower -lvorbisidec -lpspatrac3 -lm \
+		-lpspusb -lpspusbstor -lpsppower -lpsphttp -lpspssl -lpspwlan -lpspnet_adhocmatching -lpspnet_adhoc -lpspnet_adhocctl -lcurl \
 		-lpspgu -lpsphprm_driver -lpspkubridge -lpspsystemctrl_user -lpspumd -lpspaudiocodec -lpspaudio_driver -lpspopenpsid -lpsprtc -lmp4ff \
 		-lpspmpeg -lpspmpegbase -lpspusbdevice
 
