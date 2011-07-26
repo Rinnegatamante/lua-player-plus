@@ -1,115 +1,134 @@
-/*
- * LuaPlayer Euphoria
- * ------------------------------------------------------------------------
- * Licensed under the BSD license, see LICENSE for details.
- *
- * Copyright (c) 2005 Frank Buss <fb@frank-buss.de> (aka Shine)
- * Copyright (c) 2009 Danny Glover <danny86@live.ie> (aka Zack) 
- *
- * Official Forum : http://www.retroemu.com/forum/forumdisplay.php?f=148
- * For help using LuaPlayer, code help, tutorials etc please visit the official site : http://www.retroemu.com/forum/forumdisplay.php?f=148
- *
- * Credits:
- * 
- * (from Shine/Zack) 
- *
- *   many thanks to the authors of the PSPSDK from http://forums.ps2dev.org
- *   and to the hints and discussions from #pspdev on freenode.net
- *
- * (from Zack Only)
- *
- * Thanks to Brunni for the Swizzle/UnSwizzle code (taken from oslib). 
- * Thanks to Arshia001 for AALIB. It is the sound engine used in LuaPlayer Euphoria. 
- * Thanks to HardHat for being a supportive friend and advisor.
- * Thanks to Benhur for IntraFont.
- * Thanks to Jono for the moveToVram code.
- * Thanks to Raphael for the Vram manager code.
- * Thanks to Osgeld, Dan369 & Cmbeke for testing LuaPlayer Euphoria for me and coming up with some neat ideas for it.
- * Thanks to the entire LuaPlayer Euphoria userbase, for using it and for supporting it's development. You guys rock!
- *
- *
- */
- 
- //Below code is a mix of code from the SDK sample and code from LuaPlayer HM V5 (Thanks to both!)
- 
-#include <pspkernel.h>
-#include <pspdisplay.h>
-#include <pspdebug.h>
-#include <pspgu.h>
-#include <string.h>
 #include <psputility.h>
-
-#include "../graphics/graphics.h"
+#include <pspdisplay.h>
+#include <psputility_osk.h>
+#include <stdio.h>
+#include <string.h>
+#include <pspgu.h>
+#include <pspgum.h>
+#include <pspsdk.h>
 #include "osk.h"
+#include "../graphics/graphics.h"
 
-void char2UShort(const char* c, unsigned short* us)
-{
-	int i;
-	for (i=0; i<strlen(c); ++i)
-		us[i] = c[i];
-		
-	us[strlen(c)]=0;
+
+PspGeContext __attribute__((aligned(16))) geContext3;
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// Get text from OSK:
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+int get_text_osk(char *input, unsigned short *intext, unsigned short *desc){
+    int done=0;
+    unsigned short outtext[128] = { 0 }; // text after input
+    clearScreen(0);
+    flipScreen();
+    clearScreen(0);
+    flipScreen();
+    sceGeSaveContext(&geContext3);
+
+    SceUtilityOskData data;
+    memset(&data, 0, sizeof(data));
+    data.language = PSP_UTILITY_OSK_LANGUAGE_DEFAULT;            // key glyphs: 0-1=hiragana, 2+=western/whatever the other field says
+    data.lines = 1;                // just one line
+    data.unk_24 = 1;            // set to 1
+    data.inputtype = PSP_UTILITY_OSK_INPUTTYPE_ALL;
+    data.desc = desc;
+    data.intext = intext;
+    data.outtextlength = 512;    // sizeof(outtext) / sizeof(unsigned short)
+    data.outtextlimit = 512;        // just allow 50 chars
+    data.outtext = (unsigned short*)outtext;
+
+    SceUtilityOskParams osk;
+    memset(&osk, 0, sizeof(osk));
+    osk.base.size = sizeof(osk);
+    // dialog language: 0=Japanese, 1=English, 2=French, 3=Spanish, 4=German,
+    // 5=Italian, 6=Dutch, 7=Portuguese, 8=Russian, 9=Korean, 10-11=Chinese, 12+=default
+    osk.base.language = 12;
+    osk.base.buttonSwap = 1;        // X button: 1
+    osk.base.graphicsThread = 17;    // gfx thread pri
+    //osk.base.unknown = 19;            // unknown thread pri (?)
+    osk.base.accessThread = 19;
+    osk.base.fontThread = 18;
+    osk.base.soundThread = 16;
+    osk.datacount = 1;
+    osk.data = &data;
+
+    int rc = sceUtilityOskInitStart(&osk);
+
+    while(!done) {
+        int i,j=0;
+
+        clearScreen(0);
+
+        switch(sceUtilityOskGetStatus()){
+            case PSP_UTILITY_DIALOG_INIT :
+            break;
+            case PSP_UTILITY_DIALOG_VISIBLE :
+            sceUtilityOskUpdate(1); // 2 is taken from ps2dev.org recommendation
+            break;
+            case PSP_UTILITY_DIALOG_QUIT :
+            sceUtilityOskShutdownStart();
+            break;
+            case PSP_UTILITY_DIALOG_FINISHED :
+            sceUtilityOskShutdownStart();
+            done = 1;
+            break;
+            case PSP_UTILITY_DIALOG_NONE :
+            default :
+            break;
+        }
+
+        for(i = 0; data.outtext[i]; i++)
+            if (data.outtext[i]!='\0' && data.outtext[i]!='\n' && data.outtext[i]!='\r'){
+                input[j] = data.outtext[i];
+                j++;
+            }
+        input[j] = 0;
+
+        // wait TWO vblanks because one makes the input "twitchy"
+        sceDisplayWaitVblankStart();
+        flipScreen();
+    }
+sceUtilityOskShutdownStart();
+sceUtilityOskShutdownStart();
+sceDisplayWaitVblankStart();
+    clearScreen(0);
+    flipScreen();
+    clearScreen(0);
+    flipScreen();
+    sceGuFinish();
+    sceGuSync(0, 0);
+    sceGeRestoreContext(&geContext3);
+    return 1;
 }
- 
-void osk_create(SceUtilityOskData *data, unsigned short* desc, unsigned short* intext, int inputtype)
-{
-	unsigned short outtext[128] = { 0 };
-	memset(data, 0, sizeof(SceUtilityOskData));
-	data->language = PSP_UTILITY_OSK_LANGUAGE_DEFAULT;
-	data->lines = 1;
-	data->unk_24 = 1;
-	data->inputtype = inputtype;
-	data->desc = desc;
-	data->intext = intext;
-	data->outtextlength = 128;
-	data->outtextlimit = 64; // Limit input to 64 characters
-	data->outtext = outtext;
-		
-	SceUtilityOskParams params;
-	memset(&params, 0, sizeof(params));
-	params.base.size = sizeof(params);
-	sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_LANGUAGE, &params.base.language);
-	sceUtilityGetSystemParamInt(PSP_SYSTEMPARAM_ID_INT_UNKNOWN, &params.base.buttonSwap);
-	params.base.graphicsThread = 17;
-	params.base.accessThread = 19;
-	params.base.fontThread = 18;
-	params.base.soundThread = 16;
-	params.datacount = 1;
-	params.data = data;
-	
-	
-	sceUtilityOskInitStart(&params);
-	
-	return;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// requestString:
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+char *requestString (char *descStr, char *initialStr){
+    clearScreen(0);
+    flipScreen();
+    clearScreen(0);
+    flipScreen();
+    int ok, i;
+    static char str[64];
+    unsigned short intext[128]  = { 0 }; // text already in the edit box on start
+    unsigned short desc[128]  = { 0 };
+
+    if (initialStr[0] != 0)
+        for (i=0; i<=strlen(initialStr); i++)
+            intext[i] = (unsigned short)initialStr[i];
+
+    if (descStr[0] != 0)
+        for (i=0; i<=strlen(descStr); i++)
+            desc[i] = (unsigned short)descStr[i];
+
+    ok = get_text_osk(str, intext, desc);
+
+    pspDebugScreenInit();
+    pspDebugScreenSetBackColor(0xFF000000);
+    pspDebugScreenSetTextColor(0xFFFFFFFF);
+    pspDebugScreenClear();
+
+    if (ok)
+        return str;
+
+    return 0;
 }
-
-int osk_update()
-{
-	switch(sceUtilityOskGetStatus())
-	{
-		case PSP_UTILITY_DIALOG_INIT:
-			break;
-		
-		case PSP_UTILITY_DIALOG_VISIBLE:
-			sceUtilityOskUpdate(1);
-			break;
-		
-		case PSP_UTILITY_DIALOG_QUIT:
-			sceUtilityOskShutdownStart();
-			break;
-		
-		case PSP_UTILITY_DIALOG_FINISHED:
-			break;
-			
-		case PSP_UTILITY_DIALOG_NONE:
-			return 0;
-			
-		default :
-			break;
-	}
-		
-	return 1;
-}
-
-
-
