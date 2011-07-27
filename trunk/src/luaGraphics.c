@@ -549,6 +549,108 @@ static int Image_fontPrint(lua_State *L) {
     return 0;
 }
 
+static int Image_fontPrintRight(lua_State *L) {
+    int argc = lua_gettop(L);
+    if (argc != 4 && argc != 5) return luaL_error(L, "wrong number of arguments");
+    SETDEST
+    Font* font = *toFont(L, 1);
+    int y = luaL_checkint(L, 2);
+    const char* text = luaL_checkstring(L, 3);
+    Color color = (argc == 5)?*toColor(L, 4):0xFF000000;
+    int num_chars = strlen(text);
+    FT_GlyphSlot slot = font->face->glyph;
+    int x1 = 0;
+    int maxHeight = 0;
+    int n1;
+    for (n1 = 0; n1 < num_chars; n1++) {
+        FT_UInt glyph_index = FT_Get_Char_Index(font->face, text[n1]);
+        int error = FT_Load_Glyph(font->face, glyph_index, FT_LOAD_DEFAULT );
+        if (error) continue;
+        error = FT_Render_Glyph(font->face->glyph, ft_render_mode_normal );
+        if (error) continue;
+        if (slot->bitmap.rows > maxHeight) maxHeight = slot->bitmap.rows;
+        x1 += slot->advance.x >> 6;
+    }
+    int x = 480 - x1;
+    int n;
+    for (n = 0; n < num_chars; n++) {
+        FT_UInt glyph_index = FT_Get_Char_Index(font->face, text[n]);
+        int error = FT_Load_Glyph(font->face, glyph_index, FT_LOAD_DEFAULT);
+        if (error) continue;
+        error = FT_Render_Glyph(font->face->glyph, ft_render_mode_normal);
+        if (error) continue;
+        if (dest) {
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top, color, dest);
+        } else {
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top, color);
+        }
+        x += slot->advance.x >> 6;
+        y += slot->advance.y >> 6;
+    }
+
+    return 0;
+}
+
+static int Image_fontPrintRightOutline(lua_State *L) {
+    int argc = lua_gettop(L);
+    if (argc != 5 && argc != 6) return luaL_error(L, "wrong number of arguments");
+    SETDEST
+    Font* font = *toFont(L, 1);
+    int y = luaL_checkint(L, 2);
+    const char* text = luaL_checkstring(L, 3);
+    Color color = (argc >= 5)?*toColor(L, 4):0xFF000000;
+    Color color2 = (argc == 6)?*toColor(L, 5):0xFF000000;
+    
+    int num_chars = strlen(text);
+    FT_GlyphSlot slot = font->face->glyph;
+    int x1 = 0;
+    int maxHeight = 0;
+    int n1;
+    for (n1 = 0; n1 < num_chars; n1++) {
+        FT_UInt glyph_index = FT_Get_Char_Index(font->face, text[n1]);
+        int error = FT_Load_Glyph(font->face, glyph_index, FT_LOAD_DEFAULT );
+        if (error) continue;
+        error = FT_Render_Glyph(font->face->glyph, ft_render_mode_normal );
+        if (error) continue;
+        if (slot->bitmap.rows > maxHeight) maxHeight = slot->bitmap.rows;
+        x1 += slot->advance.x >> 6;
+    }
+    int x = 480-x1-2;
+    int n;
+    for (n = 0; n < num_chars; n++) {
+        FT_UInt glyph_index = FT_Get_Char_Index(font->face, text[n]);
+        int error = FT_Load_Glyph(font->face, glyph_index, FT_LOAD_DEFAULT);
+        if (error) continue;
+        error = FT_Render_Glyph(font->face->glyph, ft_render_mode_normal);
+        if (error) continue;
+        if (dest) {
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left - 1, y - slot->bitmap_top, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left + 1, y - slot->bitmap_top, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left - 1, y - slot->bitmap_top - 1, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left - 1, y - slot->bitmap_top + 1, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top + 1, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top - 1, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left + 1, y - slot->bitmap_top + 1, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left + 1, y - slot->bitmap_top - 1, color2, dest);
+            fontPrintTextImage(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top, color, dest);
+        } else {
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left - 1, y - slot->bitmap_top, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left + 1, y - slot->bitmap_top, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left - 1, y - slot->bitmap_top - 1, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left - 1, y - slot->bitmap_top + 1, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top + 1, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top - 1, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left + 1, y - slot->bitmap_top + 1, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left + 1, y - slot->bitmap_top - 1, color2);
+            fontPrintTextScreen(&slot->bitmap, x + slot->bitmap_left, y - slot->bitmap_top, color);
+        }
+        x += slot->advance.x >> 6;
+        y += slot->advance.y >> 6;
+    }
+
+    return 0;
+}
+
 static int Image_fontPrintCenter(lua_State *L) {
     int argc = lua_gettop(L);
     if (argc != 4 && argc != 5) return luaL_error(L, "wrong number of arguments");
@@ -754,6 +856,8 @@ static const luaL_reg Image_methods[] = {
     {"print", Image_print},
     {"fontPrint", Image_fontPrint},
     {"fontPrintCenter", Image_fontPrintCenter},
+    {"fontPrintRight", Image_fontPrintRight},
+    {"fontPrintRightOutline", Image_fontPrintRightOutline},
     {"fontPrintOutline", Image_fontPrintOutline},
     {"fontPrintCenterOutline", Image_fontPrintCenterOutline},
     {"width", Image_width},
@@ -869,3 +973,4 @@ static bool ftInitialized = false;
     luaL_openlib(L, "screen", Image_methods, 0);
     
 }
+
