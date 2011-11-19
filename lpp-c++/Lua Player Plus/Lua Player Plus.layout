@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_layout_file>
+	<ActiveTarget name="Debug" />
+	<File name="Lua Player Plus\Archives.c" open="0" top="0" tabpos="0">
+		<Cursor position="34636" topLine="1260" />
+	</File>
+	<File name="Lua Player Plus\Archives.h" open="0" top="0" tabpos="4">
+		<Cursor position="7900" topLine="83" />
+	</File>
+	<File name="Lua Player Plus\Common.h" open="0" top="0" tabpos="0">
+		<Cursor position="6275" topLine="36" />
+	</File>
+	<File name="Lua Player Plus\Lua3d.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="6620" topLine="42" />
+	</File>
+	<File name="Lua Player Plus\LuaAdhoc.cpp" open="0" top="0" tabpos="3">
+		<Cursor position="6587" topLine="93" />
+	</File>
+	<File name="Lua Player Plus\LuaGraphics.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="7190" topLine="93" />
+	</File>
+	<File name="Lua Player Plus\LuaPlayer.h" open="0" top="0" tabpos="0">
+		<Cursor position="6385" topLine="42" />
+	</File>
+	<File name="Lua Player Plus\LuaSound.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="6296" topLine="159" />
+	</File>
+	<File name="Lua Player Plus\LuaSystem.cpp" open="1" top="1" tabpos="1">
+		<Cursor position="21356" topLine="624" />
+	</File>
+	<File name="Lua Player Plus\LuaWlan.cpp" open="0" top="0" tabpos="0">
+		<Cursor position="1310" topLine="26" />
+	</File>
+	<File name="Lua Player Plus\LuaZip.cpp" open="0" top="0" tabpos="1">
+		<Cursor position="2608" topLine="48" />
+	</File>
+	<File name="Lua Player Plus\Makefile" open="0" top="0" tabpos="2">
+		<Cursor position="6672" topLine="69" />
+	</File>
+	<File name="Lua Player Plus\UmdRip.cpp" open="1" top="0" tabpos="2">
+		<Cursor position="6514" topLine="0" />
+	</File>
+	<File name="Lua Player Plus\UmdRip.h" open="0" top="0" tabpos="0">
+		<Cursor position="6415" topLine="48" />
+	</File>
+	<File name="Lua Player Plus\my_socket.h" open="0" top="0" tabpos="0">
+		<Cursor position="6150" topLine="50" />
+	</File>
+</CodeBlocks_layout_file>
