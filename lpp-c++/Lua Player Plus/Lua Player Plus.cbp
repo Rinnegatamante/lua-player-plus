@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Lua Player Plus" />
+		<Option makefile_is_custom="1" />
+		<Option execution_dir="C:\Users\Nanni\Documents\Visual Studio 2010\Projects\Lua Player Plus\Lua Player Plus\" />
+		<Option pch_mode="2" />
+		<Option compiler="pspsdk" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin\Debug\Lua Player Plus" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Debug\" />
+				<Option type="1" />
+				<Option compiler="pspsdk" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<MakeCommands>
+					<Build command="$make -f $makefile " />
+					<CompileFile command="$make -f $makefile " />
+					<Clean command="$make -f $makefile clean" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile " />
+					<SilentBuild command="$make -s -f $makefile" />
+				</MakeCommands>
+			</Target>
+			<Target title="Release">
+				<Option output="bin\Release\Lua Player Plus" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj\Release\" />
+				<Option type="1" />
+				<Option compiler="pspsdk" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+				<MakeCommands>
+					<Build command="$make -f $makefile " />
+					<CompileFile command="$make -f $makefile" />
+					<Clean command="$make -f $makefile clean" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile" />
+					<SilentBuild command="$make -s -f $makefile " />
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="Lua Player Plus\Archives.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua Player Plus\Archives.h" />
+		<Unit filename="Lua Player Plus\Boot.cpp" />
+		<Unit filename="Lua Player Plus\Common.h" />
+		<Unit filename="Lua Player Plus\KernelFunctions.cpp" />
+		<Unit filename="Lua Player Plus\LoadLib.S" />
+		<Unit filename="Lua Player Plus\Lua3d.cpp" />
+		<Unit filename="Lua Player Plus\LuaAdhoc.cpp" />
+		<Unit filename="Lua Player Plus\LuaAdhoc.h" />
+		<Unit filename="Lua Player Plus\LuaBattery.cpp" />
+		<Unit filename="Lua Player Plus\LuaControls.cpp" />
+		<Unit filename="Lua Player Plus\LuaGraphics.cpp" />
+		<Unit filename="Lua Player Plus\LuaMath.cpp" />
+		<Unit filename="Lua Player Plus\LuaPlayer.cpp" />
+		<Unit filename="Lua Player Plus\LuaPlayer.h" />
+		<Unit filename="Lua Player Plus\LuaSound.cpp" />
+		<Unit filename="Lua Player Plus\LuaSystem.cpp" />
+		<Unit filename="Lua Player Plus\LuaTimer.cpp" />
+		<Unit filename="Lua Player Plus\LuaWlan.cpp" />
+		<Unit filename="Lua Player Plus\LuaZip.cpp" />
+		<Unit filename="Lua Player Plus\Main.cpp" />
+		<Unit filename="Lua Player Plus\Makefile" />
+		<Unit filename="Lua Player Plus\UmdRip.cpp" />
+		<Unit filename="Lua Player Plus\UmdRip.h" />
+		<Unit filename="Lua Player Plus\Vera.cpp" />
+		<Unit filename="Lua Player Plus\VeraMono.cpp" />
+		<Unit filename="Lua Player Plus\kernelfunctions.S" />
+		<Unit filename="Lua Player Plus\my_socket.h" />
+		<Unit filename="Lua Player Plus\readme.txt" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>

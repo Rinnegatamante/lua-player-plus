@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2160D29D-8EA3-426E-A26A-8067D819FA6A}</ProjectGuid>
+    <Keyword>MakeFileProj</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Makefile</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <NMakeBuildCommandLine>vsmake</NMakeBuildCommandLine>
+    <NMakeOutput>EBOOT.PBP</NMakeOutput>
+    <NMakeCleanCommandLine>vsmake clean</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>vsmake clean &amp;&amp; vsmake</NMakeReBuildCommandLine>
+    <NMakePreprocessorDefinitions>WIN32;_DEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <ExecutablePath>C:\pspsdk\bin;$(ExecutablePath)</ExecutablePath>
+    <IncludePath>C:\pspsdk\psp\sdk\include;C:\pspsdk\psp\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\pspsdk\psp\sdk\lib;C:\pspsdk\psp\lib;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <NMakeBuildCommandLine>vsmake</NMakeBuildCommandLine>
+    <NMakeOutput>EBOOT.PBP</NMakeOutput>
+    <NMakeCleanCommandLine>vsmake clean</NMakeCleanCommandLine>
+    <NMakeReBuildCommandLine>vsmake clean &amp;&amp; vsmake</NMakeReBuildCommandLine>
+    <NMakePreprocessorDefinitions>WIN32;NDEBUG;$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <None Include="kernelfunctions.S" />
+    <None Include="LoadLib.S" />
+    <None Include="Makefile" />
+    <None Include="readme.txt" />
+    <None Include="sceMpeg.S" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Archives.c" />
+    <ClCompile Include="boot.cpp" />
+    <ClCompile Include="Lua3d.cpp" />
+    <ClCompile Include="LuaAdhoc.cpp" />
+    <ClCompile Include="LuaBattery.cpp" />
+    <ClCompile Include="LuaControls.cpp" />
+    <ClCompile Include="LuaGraphics.cpp" />
+    <ClCompile Include="LuaMath.cpp" />
+    <ClCompile Include="LuaPlayer.cpp" />
+    <ClCompile Include="LuaSound.cpp" />
+    <ClCompile Include="LuaSystem.cpp" />
+    <ClCompile Include="LuaTimer.cpp" />
+    <ClCompile Include="LuaWlan.cpp" />
+    <ClCompile Include="LuaZip.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="mpeg_vsh370.cpp" />
+    <ClCompile Include="Vera.cpp" />
+    <ClCompile Include="VeraMono.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Archives.h" />
+    <ClInclude Include="Common.h" />
+    <ClInclude Include="LuaAdhoc.h" />
+    <ClInclude Include="LuaPlayer.h" />
+    <ClInclude Include="my_socket.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
