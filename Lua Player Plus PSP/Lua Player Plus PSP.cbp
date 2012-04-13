@@ -1,0 +1,443 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="Lua Player Plus PSP" />
+		<Option makefile_is_custom="1" />
+		<Option pch_mode="2" />
+		<Option compiler="pspsdk" />
+		<MakeCommands>
+			<Build command="$make" />
+			<CompileFile command="$make" />
+			<Clean command="$make clean" />
+			<DistClean command="$make -f $makefile distclean$target" />
+			<AskRebuildNeeded command="$make" />
+			<SilentBuild command="$make" />
+		</MakeCommands>
+		<Build>
+			<Target title="Debug">
+				<Option output="Debug\Lua Player Plus PSP" prefix_auto="1" extension_auto="1" />
+				<Option object_output="Debug\" />
+				<Option type="1" />
+				<Option compiler="pspsdk" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+				<MakeCommands>
+					<Build command="$make -f $makefile" />
+					<CompileFile command="$make -f $makefile " />
+					<Clean command="$make -f $makefile clean" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile " />
+					<SilentBuild command="$make -s -f $makefile" />
+				</MakeCommands>
+			</Target>
+			<Target title="Release">
+				<Option output="Release\Lua Player Plus PSP" prefix_auto="1" extension_auto="1" />
+				<Option object_output="Release\" />
+				<Option type="1" />
+				<Option compiler="pspsdk" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+				<MakeCommands>
+					<Build command="$make -f $makefile" />
+					<CompileFile command="$make -f $makefile " />
+					<Clean command="$make -f $makefile clean" />
+					<DistClean command="$make -f $makefile distclean$target" />
+					<AskRebuildNeeded command="$make -q -f $makefile " />
+					<SilentBuild command="$make -s -f $makefile " />
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+		</Compiler>
+		<Unit filename="LPP.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="LPP.h" />
+		<Unit filename="Libs\7zip\7zAlloc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zAlloc.h" />
+		<Unit filename="Libs\7zip\7zBuf.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zBuf.h" />
+		<Unit filename="Libs\7zip\7zCrc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zCrc.h" />
+		<Unit filename="Libs\7zip\7zDecode.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zDecode.h" />
+		<Unit filename="Libs\7zip\7zExtract.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zExtract.h" />
+		<Unit filename="Libs\7zip\7zHeader.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zHeader.h" />
+		<Unit filename="Libs\7zip\7zIn.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zIn.h" />
+		<Unit filename="Libs\7zip\7zItem.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\7zItem.h" />
+		<Unit filename="Libs\7zip\7zStream.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\Bcj2.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\Bcj2.h" />
+		<Unit filename="Libs\7zip\Bra.h" />
+		<Unit filename="Libs\7zip\Bra86.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\CpuArch.h" />
+		<Unit filename="Libs\7zip\LzmaDec.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\7zip\LzmaDec.h" />
+		<Unit filename="Libs\7zip\Types.h" />
+		<Unit filename="Libs\AdHoc\AdHoc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\AdHoc\AdHoc.h" />
+		<Unit filename="Libs\Audio\Audio.h" />
+		<Unit filename="Libs\Audio\audio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Audio\audio.h" />
+		<Unit filename="Libs\Audio\bgm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Audio\bgm.h" />
+		<Unit filename="Libs\Audio\media.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Audio\mod.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Audio\oslib.h" />
+		<Unit filename="Libs\Audio\readwav.h" />
+		<Unit filename="Libs\Battery\Battery.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Battery\Battery.h" />
+		<Unit filename="Libs\Dir\Dir.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Dir\Dir.h" />
+		<Unit filename="Libs\Fex\Binary_Extractor.cpp" />
+		<Unit filename="Libs\Fex\Binary_Extractor.h" />
+		<Unit filename="Libs\Fex\Data_Reader.cpp" />
+		<Unit filename="Libs\Fex\Data_Reader.h" />
+		<Unit filename="Libs\Fex\File_Extractor.cpp" />
+		<Unit filename="Libs\Fex\File_Extractor.h" />
+		<Unit filename="Libs\Fex\Gzip_Extractor.cpp" />
+		<Unit filename="Libs\Fex\Gzip_Extractor.h" />
+		<Unit filename="Libs\Fex\Gzip_Reader.cpp" />
+		<Unit filename="Libs\Fex\Gzip_Reader.h" />
+		<Unit filename="Libs\Fex\Rar_Extractor.cpp" />
+		<Unit filename="Libs\Fex\Rar_Extractor.h" />
+		<Unit filename="Libs\Fex\Zip7_Extractor.cpp" />
+		<Unit filename="Libs\Fex\Zip7_Extractor.h" />
+		<Unit filename="Libs\Fex\Zip_Extractor.cpp" />
+		<Unit filename="Libs\Fex\Zip_Extractor.h" />
+		<Unit filename="Libs\Fex\Zlib_Inflater.cpp" />
+		<Unit filename="Libs\Fex\Zlib_Inflater.h" />
+		<Unit filename="Libs\Fex\blargg_common.cpp" />
+		<Unit filename="Libs\Fex\blargg_common.h" />
+		<Unit filename="Libs\Fex\blargg_config.h" />
+		<Unit filename="Libs\Fex\blargg_endian.h" />
+		<Unit filename="Libs\Fex\blargg_errors.cpp" />
+		<Unit filename="Libs\Fex\blargg_errors.h" />
+		<Unit filename="Libs\Fex\blargg_source.h" />
+		<Unit filename="Libs\Fex\fex.cpp" />
+		<Unit filename="Libs\Fex\fex.h" />
+		<Unit filename="Libs\Graphics\Graphics.c">
+			<Option compilerVar="CPP" />
+		</Unit>
+		<Unit filename="Libs\Graphics\Graphics.h" />
+		<Unit filename="Libs\Graphics\vera.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Graphics\veraMono.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Kubridge\kubridge.h" />
+		<Unit filename="Libs\Kubridge\pspinit.h" />
+		<Unit filename="Libs\Kubridge\pspsysmem.h" />
+		<Unit filename="Libs\Kubridge\pspsysmem_kernel.h" />
+		<Unit filename="Libs\Kubridge\pspusbdevice.h" />
+		<Unit filename="Libs\Kubridge\systemctrl.h" />
+		<Unit filename="Libs\Kubridge\systemctrl_se.h" />
+		<Unit filename="Libs\Kubridge\vshctrl.h" />
+		<Unit filename="Libs\LibnsGif\libnsgif.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\LibnsGif\libnsgif.h" />
+		<Unit filename="Libs\Math\Math.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Math\Math.h" />
+		<Unit filename="Libs\Psar\Psar.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Psar\Psar.h" />
+		<Unit filename="Libs\Timer\Timer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Timer\Timer.h" />
+		<Unit filename="Libs\Types.h" />
+		<Unit filename="Libs\Umd\Umd.cpp" />
+		<Unit filename="Libs\Umd\Umd.h" />
+		<Unit filename="Libs\Unrar\archive.cpp" />
+		<Unit filename="Libs\Unrar\archive.hpp" />
+		<Unit filename="Libs\Unrar\arcread.cpp" />
+		<Unit filename="Libs\Unrar\array.hpp" />
+		<Unit filename="Libs\Unrar\coder.cpp" />
+		<Unit filename="Libs\Unrar\coder.hpp" />
+		<Unit filename="Libs\Unrar\compress.hpp" />
+		<Unit filename="Libs\Unrar\crc.cpp" />
+		<Unit filename="Libs\Unrar\encname.cpp" />
+		<Unit filename="Libs\Unrar\encname.hpp" />
+		<Unit filename="Libs\Unrar\extract.cpp" />
+		<Unit filename="Libs\Unrar\getbits.cpp" />
+		<Unit filename="Libs\Unrar\getbits.hpp" />
+		<Unit filename="Libs\Unrar\headers.hpp" />
+		<Unit filename="Libs\Unrar\model.cpp" />
+		<Unit filename="Libs\Unrar\model.hpp" />
+		<Unit filename="Libs\Unrar\rar.hpp" />
+		<Unit filename="Libs\Unrar\rarvm.cpp" />
+		<Unit filename="Libs\Unrar\rarvm.hpp" />
+		<Unit filename="Libs\Unrar\rarvmtbl.cpp" />
+		<Unit filename="Libs\Unrar\rawread.cpp" />
+		<Unit filename="Libs\Unrar\rawread.hpp" />
+		<Unit filename="Libs\Unrar\suballoc.cpp" />
+		<Unit filename="Libs\Unrar\suballoc.hpp" />
+		<Unit filename="Libs\Unrar\unicode.cpp" />
+		<Unit filename="Libs\Unrar\unicode.hpp" />
+		<Unit filename="Libs\Unrar\unpack.cpp" />
+		<Unit filename="Libs\Unrar\unpack.hpp" />
+		<Unit filename="Libs\Unrar\unpack15.cpp" />
+		<Unit filename="Libs\Unrar\unpack20.cpp" />
+		<Unit filename="Libs\Unrar\unrar.cpp" />
+		<Unit filename="Libs\Unrar\unrar.h" />
+		<Unit filename="Libs\Unrar\unrar_misc.cpp" />
+		<Unit filename="Libs\Unrar\unrar_open.cpp" />
+		<Unit filename="Libs\Utils\Utils.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\Utils\Utils.h" />
+		<Unit filename="Libs\intraFont\intraFont.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\intraFont\intraFont.h" />
+		<Unit filename="Libs\intraFont\libccc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\intraFont\libccc.h" />
+		<Unit filename="Libs\mXml\mxml-attr.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-entity.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-file.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-get.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-index.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-node.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-private.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-private.h" />
+		<Unit filename="Libs\mXml\mxml-search.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-set.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml-string.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\mXml\mxml.h" />
+		<Unit filename="Libs\mXml\mxmldoc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\minIni\minGlue.h" />
+		<Unit filename="Libs\minIni\minIni.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Libs\minIni\minIni.h" />
+		<Unit filename="Lua\Archive.cpp">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\Archive.h" />
+		<Unit filename="Lua\Audio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\Audio.h" />
+		<Unit filename="Lua\Controls.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\Controls.h" />
+		<Unit filename="Lua\Graphics.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\Graphics.h" />
+		<Unit filename="Lua\System.cpp" />
+		<Unit filename="Lua\System.h" />
+		<Unit filename="Lua\Timer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\Timer.h" />
+		<Unit filename="Lua\src\lapi.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lapi.h" />
+		<Unit filename="Lua\src\lauxlib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lauxlib.h" />
+		<Unit filename="Lua\src\lbaselib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lcode.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lcode.h" />
+		<Unit filename="Lua\src\ldblib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ldebug.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ldebug.h" />
+		<Unit filename="Lua\src\ldo.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ldo.h" />
+		<Unit filename="Lua\src\ldump.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lfunc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lfunc.h" />
+		<Unit filename="Lua\src\lgc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lgc.h" />
+		<Unit filename="Lua\src\linit.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\liolib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\llex.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\llex.h" />
+		<Unit filename="Lua\src\llimits.h" />
+		<Unit filename="Lua\src\lmathlib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lmem.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lmem.h" />
+		<Unit filename="Lua\src\loadlib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lobject.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lobject.h" />
+		<Unit filename="Lua\src\lopcodes.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lopcodes.h" />
+		<Unit filename="Lua\src\loslib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lparser.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lparser.h" />
+		<Unit filename="Lua\src\lstate.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lstate.h" />
+		<Unit filename="Lua\src\lstring.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lstring.h" />
+		<Unit filename="Lua\src\lstrlib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ltable.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ltable.h" />
+		<Unit filename="Lua\src\ltablib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ltm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\ltm.h" />
+		<Unit filename="Lua\src\lua.h" />
+		<Unit filename="Lua\src\luaconf.h" />
+		<Unit filename="Lua\src\lualib.h" />
+		<Unit filename="Lua\src\lundump.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lundump.h" />
+		<Unit filename="Lua\src\lvm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lvm.h" />
+		<Unit filename="Lua\src\lzio.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Lua\src\lzio.h" />
+		<Unit filename="Lua\src\print.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="Makefile" />
+		<Extensions>
+			<code_completion />
+			<envvars />
+			<debugger />
+			<lib_finder disable_auto="1" />
+			<DoxyBlocks>
+				<comment_style block="0" line="0" />
+				<doxyfile_project />
+				<doxyfile_build />
+				<doxyfile_warnings />
+				<doxyfile_output />
+				<doxyfile_dot />
+				<general />
+			</DoxyBlocks>
+		</Extensions>
+	</Project>
+</CodeBlocks_project_file>
