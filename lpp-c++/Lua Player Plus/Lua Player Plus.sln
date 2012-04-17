@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Lua Player Plus", "Lua Player Plus\Lua Player Plus.vcxproj", "{2160D29D-8EA3-426E-A26A-8067D819FA6A}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "KernelFunctions", "KernelFunctions\KernelFunctions.vcxproj", "{D63D6F21-4895-4B4C-A9EE-C795FE92D6F5}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{2160D29D-8EA3-426E-A26A-8067D819FA6A}.Debug|Win32.ActiveCfg = Debug|Win32
+		{2160D29D-8EA3-426E-A26A-8067D819FA6A}.Debug|Win32.Build.0 = Debug|Win32
+		{2160D29D-8EA3-426E-A26A-8067D819FA6A}.Release|Win32.ActiveCfg = Release|Win32
+		{2160D29D-8EA3-426E-A26A-8067D819FA6A}.Release|Win32.Build.0 = Release|Win32
+		{D63D6F21-4895-4B4C-A9EE-C795FE92D6F5}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D63D6F21-4895-4B4C-A9EE-C795FE92D6F5}.Debug|Win32.Build.0 = Debug|Win32
+		{D63D6F21-4895-4B4C-A9EE-C795FE92D6F5}.Release|Win32.ActiveCfg = Release|Win32
+		{D63D6F21-4895-4B4C-A9EE-C795FE92D6F5}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
