@@ -1,7 +1,7 @@
 TARGET = lua
 
 LUA_OBJS = 			src/luaPlayer.o src/utility.o src/luaMath.o \
-					src/luaControls.o src/luaGraphics.o src/libs/sce/osk.o src/luaSound.o \
+					src/luaControls.o src/luaGraphics.o src/luaSound.o \
 					src/lua3d.o src/luaTimer.o src/luaSystem.o src/luaWlan.o \
 					
 
