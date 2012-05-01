@@ -510,101 +510,6 @@ LPP_Surface* LPPG_LoadImageBMPImpl(u8 *data, size_t in_size, u8 *inv)
     return (tmp);
 }
 
-LPP_Surface *LPPG_LoadImageJPGImpl(struct jpeg_decompress_struct dinfo) {
-    jpeg_read_header(&dinfo, TRUE);
-    u32 width = dinfo.image_width;
-    u32 height = dinfo.image_height;
-    jpeg_start_decompress(&dinfo);
-
-    if(width > 512 || height > 512) {
-	    #ifdef DEBUG
-		dwrite_output("Function %s Line %d : Image dimensions are highter than 512.\n", __FUNCTION__, __LINE__);
-		#endif
-        jpeg_destroy_decompress(&dinfo);
-        return null;
-    }
-
-    LPP_Surface *tmp = (LPP_Surface*)malloc(sizeof(LPP_Surface));
-    if(!tmp) {
-	    #ifdef DEBUG
-		dwrite_output("Function %s Line %d : Cannot allocate 'tmp' to memory.\n", __FUNCTION__, __LINE__);
-		#endif
-        jpeg_destroy_decompress(&dinfo);
-        return null;
-    }
-
-    tmp->width = width;
-    tmp->height = height;
-    tmp->realW = NextPow2(width);
-    tmp->realH = NextPow2(height);
-    tmp->pixels = (u32*)memalign(16, tmp->realH * tmp->realW * sizeof(u32));
-    tmp->location = LPP_RAM;
-
-    u8 *line = (u8*)malloc(width * 3);
-    if(!line) {
-	    #ifdef DEBUG
-		dwrite_output("Function %s Line %d : Cannot allocate 'line' to memory.\n", __FUNCTION__, __LINE__);
-		#endif
-        LPPG_FreeSurface(tmp);
-        jpeg_destroy_decompress(&dinfo);
-        return null;
-    }
-
-    if(dinfo.jpeg_color_space == JCS_GRAYSCALE) {
-        while(dinfo.output_scanline < dinfo.output_height) {
-            int y = dinfo.output_scanline, x;
-            jpeg_read_scanlines(&dinfo, &line, 1);
-            for(x = 0; x < width; x++) {
-                u32 c = line[x];
-                tmp->pixels[x + tmp->realW * y] = c | (c << 8) | (c << 16) | 0xff000000;
-            }
-        }
-    } else {
-        while(dinfo.output_scanline < dinfo.output_height) {
-            int y = dinfo.output_scanline, x;
-            jpeg_read_scanlines(&dinfo, &line, 1);
-            u8* line_ptr = line;
-            for(x = 0; x < width; x++) {
-                u32 c  = *(line_ptr++);
-                c |= (*(line_ptr++)) << 8;
-                c |= (*(line_ptr++)) << 16;
-                tmp->pixels[x + tmp->realW * y] = c | 0xff000000;
-            }
-        }
-    }
-
-    tmp->bpp = 4;
-
-    jpeg_finish_decompress(&dinfo);
-    jpeg_destroy_decompress(&dinfo);
-    free(line);
-
-    return tmp;
-}
-
-LPP_Surface *LPPG_LoadImageJPG(L_CONST char *filename)
-{
-    struct jpeg_decompress_struct dinfo;
-    struct jpeg_error_mgr jerr;
-    dinfo.err = jpeg_std_error(&jerr);
-    jpeg_create_decompress(&dinfo);
-
-    FILE *fp = fopen(filename, "rb");
-    if(!fp) {
-	    #ifdef DEBUG
-		dwrite_output("Function %s Line %d : Cannot open the file '%s' for read.\n", __FUNCTION__, __LINE__, filename);
-		#endif
-        jpeg_destroy_decompress(&dinfo);
-        return null;
-    }
-
-    jpeg_stdio_src(&dinfo, fp);
-    LPP_Surface *tmp = LPPG_LoadImageJPGImpl(dinfo);
-    fclose(fp);
-
-    return (tmp);
-}
-
 LPP_Surface *LPPG_LoadImageBMP(L_CONST char *filename)
 {
     FILE *fp = fopen(filename, "rb");
@@ -1464,6 +1369,37 @@ LPP_Surface *LPPG_LoadImageJPGFMem(u8 *data, size_t len)
     }
 
     return(tmp);
+}
+
+LPP_Surface *LPPG_LoadImageJPG(L_CONST char *filename)
+{
+    FILE *fp = fopen(filename, "rb");
+    if(fp == null)
+    {
+        #ifdef DEBUG
+        dwrite_output("Function %s Line %d : Cannot open the file '%s'.\n", __FUNCTION__, __LINE__, filename);
+        #endif
+        return null;
+    }
+    fseek(fp,0,2);
+    size_t len = ftell(fp);
+    rewind(fp);
+    u8 *data = (u8*)malloc(len);
+    if(!data)
+    {
+        #ifdef DEBUG
+        dwrite_output("Function %s Line %d : Cannot allocate 'data' to memory.\n", __FUNCTION__, __LINE__);
+        #endif
+        return null;
+    }
+    fread(data, len, 1, fp);
+    fclose(fp);
+
+    LPP_Surface *s = LPPG_LoadImageJPGFMem(data, len);
+
+    free(data);
+
+    return(s);
 }
 
 LPP_Surface *LPPG_LoadImageFMem(u8* data, size_t len, L_CONST char *filename)
