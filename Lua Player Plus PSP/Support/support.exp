@@ -1,0 +1,34 @@
+# Define the exports for the prx
+PSP_BEGIN_EXPORTS
+
+# These four lines are mandatory (although you can add other functions like module_stop)
+# syslib is a psynonym for the single mandatory export.
+PSP_EXPORT_START(syslib, 0, 0x8000)
+PSP_EXPORT_FUNC_HASH(module_start)
+PSP_EXPORT_VAR_HASH(module_info)
+PSP_EXPORT_END
+
+# Export our function
+PSP_EXPORT_START(Support, 0, 0x4001)
+PSP_EXPORT_FUNC(StartISO)
+PSP_EXPORT_FUNC(LaunchPops)
+PSP_EXPORT_FUNC(Read_eeprom)
+PSP_EXPORT_FUNC(Write_eeprom)
+PSP_EXPORT_FUNC(getBaryon)
+PSP_EXPORT_FUNC(getPommel)
+PSP_EXPORT_FUNC(RunEboot)
+PSP_EXPORT_FUNC(LaunchUMD)
+PSP_EXPORT_FUNC(RunUpdate)
+PSP_EXPORT_FUNC(sceSysregGetTachyonVersion)
+PSP_EXPORT_FUNC(setDisplayBrightness)
+PSP_EXPORT_FUNC(getDisplayBrightness)
+PSP_EXPORT_FUNC(getMbr)
+PSP_EXPORT_FUNC(setMbr)
+PSP_EXPORT_FUNC(getIpl)
+PSP_EXPORT_FUNC(setIpl)
+PSP_EXPORT_FUNC(getHen)
+PSP_EXPORT_FUNC(isSe)
+PSP_EXPORT_FUNC(isDevhook)
+PSP_EXPORT_END
+
+PSP_END_EXPORTS
