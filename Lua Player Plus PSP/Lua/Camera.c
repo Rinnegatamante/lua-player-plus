@@ -42,7 +42,7 @@
 #- Raphael for vram manager code ---------------------------------------------------------------------------------------#
 #- Dynodzzo for LSD concepts -------------------------------------------------------------------------------------------#
 #- ab_portugal for Image.negative function -----------------------------------------------------------------------------#
-#- JiCé for drawCircle function ----------------------------------------------------------------------------------------#
+#- JiCÃ© for drawCircle function ----------------------------------------------------------------------------------------#
 #- Rapper_skull & DarkGiovy for testing LuaPlayer Plus and coming up with some neat ideas for it. ----------------------#
 #-----------------------------------------------------------------------------------------------------------------------#
 #-----------------------------------------------------------------------------------------------------------------------#
@@ -64,7 +64,7 @@ static int luaCamera_initVideo(lua_State *L)
     Int32 argc = lua_gettop(L);
     if(argc > 1)
     {
-        return luaL_error(L, "Cam.initVideo([Resolution]) takes a maximum of 1 argument.");
+        return luaL_error(L, "Camera.initVideo([Resolution]) takes a maximum of 1 argument.");
     }
     int ret = LPP_CamInitVideo(argc == 1? luaL_checkint(L,1) : PSP_USBCAM_RESOLUTION_480_272);
     lua_pushboolean(L, !(ret < 0));
@@ -106,10 +106,8 @@ static L_CONST luaL_reg luaCamera_methods[] = {
 
 void luaCamera_Init(lua_State *L)
 {
-    lua_newtable(L);
-    luaL_register(L, 0, luaCamera_methods);
-    lua_setglobal(L, "Cam");
-
+    luaL_openlib(L, "Camera", luaCamera_methods, 0);
+	
     #define CAM_CONSTANT(name)\
     lua_pushstring(L, #name);\
     lua_pushnumber(L, PSP_USBCAM_##name);\
