@@ -152,11 +152,10 @@ static int lpp_exit(lua_State *L)
     Int16 argc = lua_gettop(L);
     if(argc > 1)
         return luaL_error(L, "lpp.exit([ExitCode]) takes 1 or no arguments.");
-    if(argc == 1) exit_code = luaL_checknumber(L,1);
+    if(argc == 1) sceKernelExitGame();
 	running = 0;
     return 0;
 }
-
 static L_CONST luaL_Reg lpp_methods[] = {
     { "delay", lpp_delay },
     { "running", lpp_running },
